@@ -1,0 +1,43 @@
+# Local dev infra. Brings up Postgres 16 with pgvector and Redis 7.
+#
+# Usage:
+#   docker compose up -d           # start in background
+#   docker compose down            # stop
+#   docker compose down -v         # stop AND wipe data volumes
+#
+# After the first `docker compose up`, run:
+#   npm run drizzle:migrate
+#
+# The pgvector image is the upstream-blessed one. It already has the
+# extension available; our migration just needs to CREATE EXTENSION.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: briefiq
+      POSTGRES_PASSWORD: briefiq
+      POSTGRES_DB: briefiq
+    ports:
+      # Bind to localhost only; never expose dev DB to LAN.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - briefiq-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U briefiq -d briefiq"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - briefiq-redis-data:/data
+
+volumes:
+  briefiq-pg-data:
+  briefiq-redis-data:

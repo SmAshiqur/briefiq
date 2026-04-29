@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BriefIQ — Personal Briefing System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Warm-dark palette: keeps the cream/sage soul of the original, inverted */
+    --bg: #0E100F;
+    --bg-grad: radial-gradient(1200px 600px at 85% -10%, rgba(123,184,147,0.06), transparent 60%),
+               radial-gradient(900px 500px at -10% 110%, rgba(217,169,104,0.04), transparent 55%),
+               #0E100F;
+    --surface: #15181A;
+    --surface2: #1B1F21;
+    --surface3: #21262A;
+    --border: #242A2C;
+    --border2: #323A3D;
+    --text: #ECEAE5;
+    --text2: #A8ADA8;
+    --text3: #6F7470;
+    --accent: #7BB893;
+    --accent-bright: #9ED6B3;
+    --accent-muted: #1A2922;
+    --accent-line: #2C443A;
+    --red: #E08070;
+    --red-muted: #2A1B19;
+    --red-line: #4A2A26;
+    --amber: #D9A968;
+    --amber-muted: #2A2117;
+    --amber-line: #4A3A22;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgba(0,0,0,0.30), 0 4px 14px rgba(0,0,0,0.25);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+    --ring: 0 0 0 3px rgba(123,184,147,0.22);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: var(--bg-grad);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--accent-muted); color: var(--accent-bright); }
+
+  button { font-family: inherit; }
+
+  /* ── Layout ── */
+  .shell {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 232px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-mark {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  .logo-mark em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .nav {
+    padding: 12px 10px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .nav-section {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 12px 12px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13.5px;
+    color: var(--text2);
+    transition: background 0.15s, color 0.15s;
+    margin-bottom: 2px;
+    user-select: none;
+    position: relative;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+
+  .nav-item.active {
+    background: var(--accent-muted);
+    color: var(--accent-bright);
+    font-weight: 500;
+  }
+
+  .nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 8px; bottom: 8px;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .nav-icon {
+    width: 18px;
+    text-align: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--accent);
+    color: #0E100F;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 20px;
+    line-height: 1.5;
+  }
+
+  .nav-badge.muted { background: var(--surface3); color: var(--text3); }
+
+  /* Sidebar status card — reassures users the system is monitoring */
+  .status-card {
+    margin: 10px;
+    padding: 12px 12px 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  .status-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .status-row .live-dot { width: 7px; height: 7px; }
+  .status-title { font-size: 11.5px; color: var(--text); font-weight: 500; }
+  .status-meta { font-size: 11px; color: var(--text3); line-height: 1.45; }
+  .status-meta b { color: var(--text2); font-weight: 500; }
+
+  .sidebar-footer {
+    padding: 10px 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .user-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .user-row:hover { background: var(--surface2); }
+
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-muted), var(--surface3));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-bright);
+    flex-shrink: 0;
+    border: 1px solid var(--accent-line);
+  }
+
+  .user-name { font-size: 13px; color: var(--text); line-height: 1.2; }
+  .user-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 16px;
+  }
+
+  .topbar-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+
+  .topbar-meta {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+  .quiet-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 20px;
+  }
+  .quiet-pill .moon { font-size: 11px; opacity: 0.8; }
+
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(123,184,147,0.5);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(123,184,147,0.4); }
+    50% { opacity: 0.45; box-shadow: 0 0 0 6px rgba(123,184,147,0); }
+  }
+
+  .add-btn {
+    background: var(--accent);
+    color: #0E100F;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .add-btn:hover { background: var(--accent-bright); }
+  .add-btn:active { transform: scale(0.98); }
+  .add-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+
+  .add-btn .plus { font-size: 16px; line-height: 1; margin-top: -1px; }
+
+  /* ── Content ── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 26px 28px 32px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; animation: fadein 0.25s ease; }
+
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Hero / intro line on feed ── */
+  .feed-hero {
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .feed-hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    line-height: 1.2;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .feed-hero h1 em { color: var(--accent); font-style: italic; }
+  .feed-hero p {
+    font-size: 13.5px;
+    color: var(--text2);
+    line-height: 1.55;
+    max-width: 560px;
+  }
+
+  /* ── Stat row ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 26px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    transition: border-color 0.15s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+
+  .stat-label {
+    font-size: 10.5px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-label .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.green { color: var(--accent-bright); }
+  .stat-value.muted { color: var(--text2); }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    margin-bottom: 10px;
+    margin-top: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label .count {
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-size: 10px;
+  }
+
+  /* ── Briefing cards ── */
+  .briefing-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s, background 0.15s;
+    position: relative;
+  }
+
+  .briefing-card:hover {
+    border-color: var(--border2);
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+    background: var(--surface2);
+  }
+
+  .briefing-card.priority::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+  }
+  .briefing-card.priority-red::before { background: var(--red); }
+  .briefing-card.priority-amber::before { background: var(--amber); }
+  .briefing-card.priority-green::before { background: var(--accent); }
+
+  .briefing-card.muted { opacity: 0.62; }
+  .briefing-card.muted:hover { opacity: 0.85; }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .card-title-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+  .signal {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .sig-red { background: var(--red); box-shadow: 0 0 0 3px var(--red-muted); }
+  .sig-amber { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-muted); }
+  .sig-green { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-muted); }
+  .sig-gray { background: var(--text3); }
+
+  .card-title { font-size: 14px; font-weight: 500; color: var(--text); }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .badge-red { background: var(--red-muted); color: var(--red); border: 1px solid var(--red-line); }
+  .badge-amber { background: var(--amber-muted); color: var(--amber); border: 1px solid var(--amber-line); }
+  .badge-green { background: var(--accent-muted); color: var(--accent-bright); border: 1px solid var(--accent-line); }
+  .badge-gray { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+
+  .card-body {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .card-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .card-time { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+  .card-sources { font-size: 11px; color: var(--text3); }
+  .card-sources b { color: var(--text2); font-weight: 500; }
+
+  /* ── Quiet block (no-changes reassurance) ── */
+  .quiet-block {
+    margin-top: 18px;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 14px 16px 6px;
+    background: rgba(255,255,255,0.012);
+  }
+  .quiet-block .qb-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .qb-title { font-size: 12.5px; color: var(--text); font-weight: 500; }
+  .qb-sub { font-size: 11.5px; color: var(--text3); margin-bottom: 12px; }
+
+  .quiet-block .briefing-card {
+    background: transparent;
+    border-color: transparent;
+    padding: 10px 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .quiet-block .briefing-card:last-child { border-bottom: none; }
+  .quiet-block .briefing-card:hover {
+    background: transparent;
+    transform: none;
+    box-shadow: none;
+    border-color: transparent;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  /* Last sync footer */
+  .sync-line {
+    margin-top: 22px;
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--text3);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ── Queries screen ── */
+  .queries-toolbar {
+    display: flex; gap: 8px; margin-bottom: 18px;
+  }
+  .search-box {
+    flex: 1;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-box:focus-within { border-color: var(--accent-line); box-shadow: var(--ring); }
+  .search-box .ic { color: var(--text3); font-size: 13px; }
+  .search-box input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .search-box input::placeholder { color: var(--text3); }
+
+  .sort-select {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text2); font-size: 12.5px; padding: 9px 12px;
+    border-radius: var(--radius-sm); cursor: pointer;
+    font-family: inherit;
+  }
+  .sort-select:hover { border-color: var(--border2); }
+
+  .query-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s, background 0.15s;
+  }
+
+  .query-card:hover { border-color: var(--border2); transform: translateY(-1px); background: var(--surface2); }
+
+  .q-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .query-card.paused .q-icon {
+    background: var(--surface3); border-color: var(--border);
+    filter: grayscale(0.5);
+  }
+
+  .q-info { flex: 1; min-width: 0; }
+  .q-title { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .q-meta { font-size: 11.5px; color: var(--text3); display: flex; gap: 8px; flex-wrap: wrap; }
+  .q-meta .dot-sep { color: var(--text3); opacity: 0.5; }
+  .q-next { color: var(--accent); }
+
+  .q-status {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .status-on { background: var(--accent-muted); color: var(--accent-bright); border: 1px solid var(--accent-line); }
+  .status-off { background: var(--surface3); color: var(--text3); border: 1px solid var(--border); }
+
+  /* ── Add screen ── */
+  .add-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding-top: 8px;
+  }
+
+  .add-heading {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+  }
+  .add-heading em { color: var(--accent); font-style: italic; }
+
+  .add-sub { font-size: 13.5px; color: var(--text2); margin-bottom: 22px; line-height: 1.6; max-width: 500px; }
+
+  .input-box {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .input-box:focus-within { border-color: var(--accent-line); box-shadow: var(--ring); }
+
+  .input-box textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 14.5px;
+    color: var(--text);
+    background: transparent;
+    resize: none;
+    line-height: 1.55;
+  }
+
+  .input-box textarea::placeholder { color: var(--text3); }
+
+  .chips-label {
+    font-size: 10.5px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    margin-bottom: 9px;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 22px; }
+
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 13px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .chip:hover {
+    background: var(--accent-muted);
+    color: var(--accent-bright);
+    border-color: var(--accent-line);
+  }
+
+  /* AI parse confirm panel */
+  .confirm-panel {
+    background: linear-gradient(180deg, var(--accent-muted), var(--surface));
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    margin-bottom: 18px;
+    display: none;
+    animation: fadein 0.25s ease;
+  }
+  .confirm-panel.show { display: block; }
+
+  .confirm-label {
+    font-size: 10.5px;
+    color: var(--accent-bright);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .confirm-q {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 16px;
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    line-height: 1.4;
+  }
+
+  .parse-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .parse-cell {
+    background: rgba(0,0,0,0.20);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .parse-cell .pc-label {
+    font-size: 10px; color: var(--accent-bright); opacity: 0.85;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
+  }
+  .parse-cell .pc-value {
+    font-size: 12.5px; color: var(--text); line-height: 1.45;
+  }
+  .parse-cell.full { grid-column: 1 / -1; }
+
+  .freq-label {
+    font-size: 11px; color: var(--text2);
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .freq-label .auto-tag {
+    font-size: 9.5px; color: var(--accent-bright);
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--accent-line);
+    padding: 1px 6px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+  }
+  .freq-btns { display: flex; gap: 7px; margin-bottom: 16px; }
+
+  .freq-btn {
+    flex: 1;
+    padding: 9px 8px;
+    background: rgba(0,0,0,0.20);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    color: var(--text2);
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+
+  .freq-btn:hover { color: var(--text); border-color: var(--accent-line); }
+  .freq-btn.sel {
+    background: var(--accent);
+    color: #0E100F;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .threshold-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.15);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+  }
+  .threshold-row .tr-label { font-size: 12px; color: var(--text2); }
+  .threshold-row .tr-label b { color: var(--text); font-weight: 500; }
+  .threshold-pills { display: flex; gap: 4px; }
+  .threshold-pills .pill {
+    font-size: 11px; padding: 4px 10px; border-radius: 20px;
+    border: 1px solid var(--border2); cursor: pointer; color: var(--text2);
+    background: transparent; transition: all 0.15s;
+  }
+  .threshold-pills .pill:hover { color: var(--text); }
+  .threshold-pills .pill.sel {
+    background: var(--accent); color: #0E100F; border-color: var(--accent); font-weight: 600;
+  }
+
+  .confirm-btns { display: flex; gap: 8px; }
+
+  .btn-primary {
+    flex: 1;
+    background: var(--accent);
+    color: #0E100F;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--accent-bright); }
+  .btn-primary:active { transform: scale(0.99); }
+  .btn-primary:focus-visible { outline: none; box-shadow: var(--ring); }
+
+  .btn-ghost {
+    padding: 11px 16px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text2);
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+  .btn-full {
+    width: 100%;
+    background: var(--accent);
+    color: #0E100F;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-full:hover { background: var(--accent-bright); }
+
+  /* ── Detail screen ── */
+  .back-btn {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 18px;
+    padding: 4px 0;
+  }
+  .back-btn:hover { color: var(--accent-bright); }
+
+  .detail-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+
+  .detail-meta {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-meta-item {
+    font-size: 11.5px;
+    color: var(--text3);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .detail-meta-item b { color: var(--text); font-weight: 500; }
+  .detail-meta-item .ic { opacity: 0.6; }
+
+  .detail-grid {
+    display: grid; grid-template-columns: 1fr 220px; gap: 22px;
+    margin-bottom: 22px;
+  }
+  @media (max-width: 760px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+
+  .timeline { }
+
+  .tl-item {
+    display: flex;
+    gap: 14px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tl-item:last-child { border-bottom: none; }
+
+  .tl-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 6px; gap: 4px; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .tl-line { flex: 1; width: 1px; background: var(--border); min-height: 20px; }
+
+  .tl-body { flex: 1; min-width: 0; }
+  .tl-date { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .tl-text { font-size: 13px; color: var(--text2); line-height: 1.55; }
+  .tl-text.hl { color: var(--text); font-weight: 500; }
+  .tl-source { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .tl-source b { color: var(--accent); font-weight: 500; }
+
+  .side-panel {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .side-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .side-card h4 {
+    font-size: 10.5px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.09em;
+    font-weight: 500; margin-bottom: 10px;
+  }
+  .source-list { display: flex; flex-direction: column; gap: 8px; }
+  .source-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text2);
+  }
+  .source-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  .feedback-row { display: flex; gap: 8px; }
+  .fb-btn {
+    flex: 1;
+    padding: 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .fb-btn:hover { background: var(--accent-muted); color: var(--accent-bright); border-color: var(--accent-line); }
+  .fb-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.45; }
+
+  .action-row { display: flex; gap: 8px; }
+
+  .action-btn {
+    flex: 1;
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    color: var(--text2);
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .action-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+  .action-btn.del { color: var(--red); border-color: var(--red-line); }
+  .action-btn.del:hover { background: var(--red-muted); }
+
+  /* ── Settings screen ── */
+  .settings-wrap { max-width: 620px; }
+  .settings-h {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px; letter-spacing: -0.3px;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .settings-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; line-height: 1.55; }
+
+  .setting-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+  }
+  .setting-row + .setting-row {
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .s-label { font-size: 13.5px; color: var(--text); font-weight: 500; }
+  .s-desc { font-size: 12px; color: var(--text3); margin-top: 3px; line-height: 1.5; }
+  .s-info { flex: 1; min-width: 0; }
+
+  .toggle {
+    width: 38px; height: 22px;
+    background: var(--surface3);
+    border-radius: 20px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.18s;
+    border: 1px solid var(--border2);
+  }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--text2);
+    top: 2px; left: 2px;
+    transition: left 0.2s, background 0.2s;
+  }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle.on::after { left: 18px; background: #0E100F; }
+
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 3px;
+  }
+  .seg-btn {
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    color: var(--text2);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .seg-btn.sel { background: var(--accent); color: #0E100F; font-weight: 600; }
+
+  .time-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    color: var(--text); font-size: 12.5px;
+    font-family: inherit;
+    width: 86px;
+  }
+  .time-input:focus { outline: none; border-color: var(--accent-line); box-shadow: var(--ring); }
+
+  /* ── Onboarding (kept for completeness) ── */
+  #screen-onboard {
+    align-items: center; justify-content: center; height: 100%;
+  }
+  #screen-onboard.active { display: flex; }
+  .onboard-inner { max-width: 460px; width: 100%; }
+  .onboard-eyebrow {
+    font-size: 10.5px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.12em;
+    font-weight: 600; margin-bottom: 10px;
+  }
+  .onboard-h {
+    font-family: 'DM Serif Display', serif;
+    font-size: 34px; color: var(--text);
+    line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 14px;
+  }
+  .onboard-h em { color: var(--accent); font-style: italic; }
+  .onboard-p { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 24px; }
+
+  /* ── Mobile nav ── */
+  .mobile-nav { display: none; }
+
+  /* ── Responsive ── */
+  @media (max-width: 760px) {
+    .sidebar { display: none; }
+    .shell { flex-direction: column; }
+    .content { padding: 16px 16px 18px; }
+    .topbar { padding: 12px 16px; }
+    .stat-row { gap: 8px; }
+    .stat-value { font-size: 22px; }
+    .stat-card { padding: 12px 12px; }
+    .feed-hero h1 { font-size: 22px; }
+    .add-heading { font-size: 24px; }
+    .parse-grid { grid-template-columns: 1fr; }
+    .mobile-nav {
+      display: flex;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 0 12px;
+      flex-shrink: 0;
+    }
+    .mob-item {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 10px; color: var(--text3);
+      cursor: pointer; padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .mob-item.active { color: var(--accent-bright); }
+    .mob-item-icon { font-size: 18px; }
+    .add-btn span:last-child { display: none; }
+    .topbar-title { font-size: 17px; }
+    .quiet-pill { display: none; }
+  }
+
+  /* Scrollbar */
+  .content::-webkit-scrollbar, .nav::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-track, .nav::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb, .nav::-webkit-scrollbar-thumb {
+    background: var(--border2); border-radius: 4px;
+  }
+  .content::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">Brief<em>IQ</em></div>
+      <div class="logo-sub">Personal briefing system</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section">Daily</div>
+      <div class="nav-item active" onclick="show('feed', this)">
+        <span class="nav-icon">◈</span> Today's briefing
+        <span class="nav-badge">2</span>
+      </div>
+      <div class="nav-item" onclick="show('queries', this)">
+        <span class="nav-icon">⊞</span> My queries
+        <span class="nav-badge muted">5</span>
+      </div>
+      <div class="nav-item" onclick="show('add', this)">
+        <span class="nav-icon">+</span> Add query
+      </div>
+
+      <div class="nav-section">System</div>
+      <div class="nav-item" onclick="show('settings', this)">
+        <span class="nav-icon">◎</span> Settings
+      </div>
+    </nav>
+
+    <div class="status-card">
+      <div class="status-row">
+        <span class="live-dot"></span>
+        <span class="status-title">Monitoring</span>
+      </div>
+      <div class="status-meta">
+        <b>5 queries</b> running.<br>
+        Last sync <b>12 min ago</b>.
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="avatar">RA</div>
+        <div>
+          <div class="user-name">Rafid Ahmed</div>
+          <div class="user-sub">Daily digest · 8:00 AM</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="tb-title">Good morning, Rafid</div>
+        <div class="topbar-meta" id="tb-meta">
+          <span class="live-dot"></span> 5 queries running · April 28
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="quiet-pill" title="Quiet hours active 10pm – 7am">
+          <span class="moon">☾</span> Quiet hours · 10pm
+        </div>
+        <button class="add-btn" onclick="show('add', null)">
+          <span class="plus">+</span> <span>Add query</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Screens -->
+    <div class="content">
+
+      <!-- Feed -->
+      <div class="screen active" id="screen-feed">
+
+        <div class="feed-hero">
+          <h1>2 things changed <em>today</em>.</h1>
+          <p>Three more queries are running quietly in the background — nothing worth interrupting you about. Silence is the system working.</p>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label"><span class="dot" style="background:var(--accent)"></span> Updates today</div>
+            <div class="stat-value green">2</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label"><span class="dot" style="background:var(--text3)"></span> No change</div>
+            <div class="stat-value muted">3</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label"><span class="dot" style="background:var(--accent-bright)"></span> Queries running</div>
+            <div class="stat-value">5</div>
+          </div>
+        </div>
+
+        <div class="section-label">What changed <span class="count">2</span></div>
+
+        <div class="briefing-card priority priority-red" onclick="showDetail('dollar')">
+          <div class="card-top">
+            <div class="card-title-row">
+              <div class="signal sig-red"></div>
+              <div class="card-title">Dollar rate in Bangladesh</div>
+            </div>
+            <div class="badge badge-red">Important</div>
+          </div>
+          <div class="card-body">Rate rose to <b style="color:var(--text)">112 BDT</b> today, up from 110 yesterday. Highest level in three weeks — analysts cite rising import demand ahead of Eid.</div>
+          <div class="card-foot">
+            <div class="card-time">⏱ 2 hours ago</div>
+            <div class="card-sources">Sources: <b>Bangladesh Bank, The Daily Star</b></div>
+          </div>
+        </div>
+
+        <div class="briefing-card priority priority-green" onclick="showDetail('intern')">
+          <div class="card-top">
+            <div class="card-title-row">
+              <div class="signal sig-green"></div>
+              <div class="card-title">Dhaka internships</div>
+            </div>
+            <div class="badge badge-green">1 new</div>
+          </div>
+          <div class="card-body">New product intern posting at <b style="color:var(--text)">Shajgoj</b>. Remote-friendly, deadline May 10. One listing from last week has been removed.</div>
+          <div class="card-foot">
+            <div class="card-time">⏱ 6 hours ago</div>
+            <div class="card-sources">Sources: <b>Bdjobs, LinkedIn</b></div>
+          </div>
+        </div>
+
+        <div class="quiet-block">
+          <div class="qb-head">
+            <span class="live-dot" style="background:var(--text3); box-shadow:none;"></span>
+            <span class="qb-title">Still monitoring · 3 queries</span>
+          </div>
+          <div class="qb-sub">No meaningful change detected. The system checked these and intentionally chose not to interrupt you.</div>
+
+          <div class="briefing-card muted">
+            <div class="card-top">
+              <div class="card-title-row">
+                <div class="signal sig-gray"></div>
+                <div class="card-title">BUET admissions</div>
+              </div>
+              <div class="badge badge-gray">No change</div>
+            </div>
+            <div class="card-foot">
+              <div class="card-time">Checked this morning</div>
+              <div class="card-sources">Next check tomorrow</div>
+            </div>
+          </div>
+
+          <div class="briefing-card muted">
+            <div class="card-top">
+              <div class="card-title-row">
+                <div class="signal sig-gray"></div>
+                <div class="card-title">Samsung launches under ৳50,000</div>
+              </div>
+              <div class="badge badge-gray">No change</div>
+            </div>
+            <div class="card-foot">
+              <div class="card-time">Checked 4 hours ago</div>
+              <div class="card-sources">Next check in 20h</div>
+            </div>
+          </div>
+
+          <div class="briefing-card muted">
+            <div class="card-top">
+              <div class="card-title-row">
+                <div class="signal sig-gray"></div>
+                <div class="card-title">Bangladesh startup funding</div>
+              </div>
+              <div class="badge badge-gray">No change</div>
+            </div>
+            <div class="card-foot">
+              <div class="card-time">Checked this morning</div>
+              <div class="card-sources">Weekly digest</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sync-line">
+          <span class="live-dot"></span> Last sync 12 minutes ago · next briefing tomorrow at 8:00 AM
+        </div>
+      </div>
+
+      <!-- Queries -->
+      <div class="screen" id="screen-queries">
+
+        <div class="queries-toolbar">
+          <div class="search-box">
+            <span class="ic">⌕</span>
+            <input type="text" placeholder="Search your queries…">
+          </div>
+          <select class="sort-select">
+            <option>Recently updated</option>
+            <option>Alphabetical</option>
+            <option>Frequency</option>
+          </select>
+        </div>
+
+        <div class="section-label">Active <span class="count">4</span></div>
+
+        <div class="query-card" onclick="showDetail('dollar')">
+          <div class="q-icon">💱</div>
+          <div class="q-info">
+            <div class="q-title">Dollar rate in Bangladesh</div>
+            <div class="q-meta">
+              <span>Every 6 hours</span><span class="dot-sep">·</span>
+              <span>Last checked 2h ago</span><span class="dot-sep">·</span>
+              <span class="q-next">Next in 4h</span>
+            </div>
+          </div>
+          <div class="q-status status-on">Active</div>
+        </div>
+
+        <div class="query-card" onclick="showDetail('intern')">
+          <div class="q-icon">💼</div>
+          <div class="q-info">
+            <div class="q-title">Dhaka internships this week</div>
+            <div class="q-meta">
+              <span>Daily</span><span class="dot-sep">·</span>
+              <span>Last checked 6h ago</span><span class="dot-sep">·</span>
+              <span class="q-next">Next tomorrow</span>
+            </div>
+          </div>
+          <div class="q-status status-on">Active</div>
+        </div>
+
+        <div class="query-card">
+          <div class="q-icon">🎓</div>
+          <div class="q-info">
+            <div class="q-title">BUET admission info changes</div>
+            <div class="q-meta">
+              <span>Daily</span><span class="dot-sep">·</span>
+              <span>Last checked this morning</span><span class="dot-sep">·</span>
+              <span class="q-next">Next tomorrow</span>
+            </div>
+          </div>
+          <div class="q-status status-on">Active</div>
+        </div>
+
+        <div class="query-card">
+          <div class="q-icon">📱</div>
+          <div class="q-info">
+            <div class="q-title">Samsung launches under ৳50k</div>
+            <div class="q-meta">
+              <span>Daily</span><span class="dot-sep">·</span>
+              <span>Last checked 4h ago</span><span class="dot-sep">·</span>
+              <span class="q-next">Next in 20h</span>
+            </div>
+          </div>
+          <div class="q-status status-on">Active</div>
+        </div>
+
+        <div class="section-label" style="margin-top: 22px;">Paused <span class="count">1</span></div>
+
+        <div class="query-card paused">
+          <div class="q-icon">🚀</div>
+          <div class="q-info">
+            <div class="q-title">Bangladesh startup funding news</div>
+            <div class="q-meta">
+              <span>Weekly</span><span class="dot-sep">·</span>
+              <span>Paused 3 days ago</span>
+            </div>
+          </div>
+          <div class="q-status status-off">Paused</div>
+        </div>
+      </div>
+
+      <!-- Add query -->
+      <div class="screen" id="screen-add">
+        <div class="add-wrap">
+          <div class="add-heading">What do you want <em>to track?</em></div>
+          <div class="add-sub">Type your question naturally. The AI infers intent, picks sources, and chooses how often to check — only telling you when something <i>actually</i> changes.</div>
+
+          <div class="input-box">
+            <textarea id="q-input" rows="3" placeholder="e.g. Is the dollar rate rising in Bangladesh?"></textarea>
+          </div>
+
+          <div class="confirm-panel" id="confirm-panel">
+            <div class="confirm-label">
+              <span class="live-dot"></span> I'll track this for you
+            </div>
+            <div class="confirm-q" id="confirm-text"></div>
+
+            <div class="parse-grid">
+              <div class="parse-cell">
+                <div class="pc-label">Intent</div>
+                <div class="pc-value">Trend tracking · numerical</div>
+              </div>
+              <div class="parse-cell">
+                <div class="pc-label">Likely sources</div>
+                <div class="pc-value">Bangladesh Bank, The Daily Star, Prothom Alo</div>
+              </div>
+              <div class="parse-cell full">
+                <div class="pc-label">Signal definition</div>
+                <div class="pc-value">Notify on rate change > 1 BDT or material policy news</div>
+              </div>
+            </div>
+
+            <div class="freq-label">
+              <span>Check frequency</span>
+              <span class="auto-tag">AI suggested</span>
+            </div>
+            <div class="freq-btns">
+              <div class="freq-btn" onclick="pickFreq(this)">Every few hours</div>
+              <div class="freq-btn sel" onclick="pickFreq(this)">Daily</div>
+              <div class="freq-btn" onclick="pickFreq(this)">Weekly</div>
+            </div>
+
+            <div class="threshold-row">
+              <div class="tr-label">Signal threshold · <b>only meaningful changes</b></div>
+              <div class="threshold-pills">
+                <button class="pill" onclick="pickPill(this)">Loose</button>
+                <button class="pill sel" onclick="pickPill(this)">Balanced</button>
+                <button class="pill" onclick="pickPill(this)">Strict</button>
+              </div>
+            </div>
+
+            <div class="confirm-btns">
+              <button class="btn-primary" onclick="saveQuery()">Start tracking</button>
+              <button class="btn-ghost" onclick="cancelConfirm()">Edit</button>
+            </div>
+          </div>
+
+          <div class="chips-label">Suggestions</div>
+          <div class="chips">
+            <div class="chip" onclick="fill('Any new scholarships for Bangladeshi students?')">Scholarships for BD students</div>
+            <div class="chip" onclick="fill('Track import policy changes in Bangladesh')">Import policy changes</div>
+            <div class="chip" onclick="fill('New tech jobs in Dhaka this week')">Tech jobs in Dhaka</div>
+            <div class="chip" onclick="fill('iPhone price changes in Bangladesh')">iPhone price in BD</div>
+            <div class="chip" onclick="fill('Bangladesh cricket team latest news')">Cricket team news</div>
+            <div class="chip" onclick="fill('Any new NSU or BRAC University admission updates?')">NSU / BRAC admissions</div>
+          </div>
+
+          <button class="btn-full" onclick="confirmQuery()">Analyze with AI →</button>
+        </div>
+      </div>
+
+      <!-- Detail -->
+      <div class="screen" id="screen-detail">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+        <div class="detail-title" id="d-title"></div>
+        <div class="detail-meta">
+          <div class="detail-meta-item"><span class="ic">⟳</span> Frequency: <b id="d-freq"></b></div>
+          <div class="detail-meta-item"><span class="ic">⏱</span> Next check: <b id="d-next"></b></div>
+          <div class="detail-meta-item"><span class="ic">◈</span> Signal: <b>Balanced</b></div>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <div class="section-label">History</div>
+            <div class="timeline" id="d-timeline"></div>
+          </div>
+
+          <div class="side-panel">
+            <div class="side-card">
+              <h4>Sources</h4>
+              <div class="source-list" id="d-sources"></div>
+            </div>
+
+            <div class="side-card">
+              <h4>Was this useful?</h4>
+              <div class="feedback-row">
+                <button class="fb-btn" onclick="thanks(this)">👍 Useful</button>
+                <button class="fb-btn" onclick="thanks(this)">👎 Noise</button>
+              </div>
+              <div class="fb-note">Your feedback tunes the signal threshold — fewer false alarms over time.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="action-btn">Edit query</button>
+          <button class="action-btn">Pause</button>
+          <button class="action-btn del">Delete</button>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="screen" id="screen-settings">
+        <div class="settings-wrap">
+          <div class="settings-h">Settings</div>
+          <div class="settings-sub">BriefIQ is built for attention respect. Tune how the system speaks to you.</div>
+
+          <div class="section-label">Briefing</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Daily digest mode</div>
+                <div class="s-desc">Bundle all updates into one morning briefing instead of real-time alerts.</div>
+              </div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Digest delivery time</div>
+                <div class="s-desc">When the morning briefing lands.</div>
+              </div>
+              <input type="time" class="time-input" value="08:00">
+            </div>
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Default detail level</div>
+                <div class="s-desc">How deep updates should go by default.</div>
+              </div>
+              <div class="seg">
+                <button class="seg-btn">Headline</button>
+                <button class="seg-btn sel">Standard</button>
+                <button class="seg-btn">Detailed</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-top: 22px;">Signal &amp; noise</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Default signal threshold</div>
+                <div class="s-desc">How sensitive the AI is when deciding what counts as meaningful.</div>
+              </div>
+              <div class="seg">
+                <button class="seg-btn">Loose</button>
+                <button class="seg-btn sel">Balanced</button>
+                <button class="seg-btn">Strict</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Quiet hours</div>
+                <div class="s-desc">No notifications between these hours.</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="time" class="time-input" value="22:00">
+                <span style="color:var(--text3);font-size:12px;">to</span>
+                <input type="time" class="time-input" value="07:00">
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Show silence reassurance</div>
+                <div class="s-desc">Include "still monitoring" cards so silence doesn't feel like a bug.</div>
+              </div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-top: 22px;">Delivery</div>
+          <div class="setting-card">
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">In-app</div>
+                <div class="s-desc">Updates land here in your briefing feed.</div>
+              </div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Email</div>
+                <div class="s-desc">rafid.ahmed@example.com</div>
+              </div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="setting-row">
+              <div class="s-info">
+                <div class="s-label">Push notifications</div>
+                <div class="s-desc">Only triggers for high-priority signals.</div>
+              </div>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Mobile nav -->
+    <div class="mobile-nav">
+      <div class="mob-item active" onclick="show('feed', this)">
+        <div class="mob-item-icon">◈</div>
+        Briefing
+      </div>
+      <div class="mob-item" onclick="show('queries', this)">
+        <div class="mob-item-icon">⊞</div>
+        Queries
+      </div>
+      <div class="mob-item" onclick="show('add', this)">
+        <div class="mob-item-icon">+</div>
+        Add
+      </div>
+      <div class="mob-item" onclick="show('settings', this)">
+        <div class="mob-item-icon">◎</div>
+        Settings
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+  const DETAILS = {
+    dollar: {
+      title: 'Dollar rate in Bangladesh',
+      freq: 'Every 6 hours',
+      next: 'in 4 hours',
+      sources: ['Bangladesh Bank', 'The Daily Star', 'Prothom Alo', 'Reuters'],
+      timeline: [
+        { date: 'Apr 28 · 8:00 am', text: 'Rate rose to 112 BDT (up from 110). Highest level in 3 weeks.', source: 'Bangladesh Bank', hl: true, color: 'var(--red)' },
+        { date: 'Apr 27 · 8:00 am', text: 'No change — held steady at 110 BDT.', source: '', hl: false, color: 'var(--text3)' },
+        { date: 'Apr 26 · 8:00 am', text: 'Rate dropped to 110 from 113 BDT following BB intervention.', source: 'The Daily Star', hl: true, color: 'var(--amber)' },
+        { date: 'Apr 25 · 8:00 am', text: 'No change — held at 113 BDT.', source: '', hl: false, color: 'var(--text3)' },
+        { date: 'Apr 24 · 8:00 am', text: 'Rate rose to 113 from 111 BDT. Import pressure cited.', source: 'Reuters', hl: true, color: 'var(--red)' },
+      ]
+    },
+    intern: {
+      title: 'Dhaka internships this week',
+      freq: 'Daily',
+      next: 'tomorrow morning',
+      sources: ['Bdjobs', 'LinkedIn', 'Company career pages'],
+      timeline: [
+        { date: 'Apr 28', text: 'New product intern role at Shajgoj. Remote-friendly, deadline May 10.', source: 'LinkedIn', hl: true, color: 'var(--accent)' },
+        { date: 'Apr 27', text: 'No new listings detected.', source: '', hl: false, color: 'var(--text3)' },
+        { date: 'Apr 26', text: '2 new postings: Chaldal (data analyst intern), Pathao (marketing intern).', source: 'Bdjobs', hl: true, color: 'var(--accent)' },
+        { date: 'Apr 25', text: 'No new listings detected.', source: '', hl: false, color: 'var(--text3)' },
+      ]
+    }
+  };
+
+  let prevScreen = 'feed';
+
+  function show(name, navEl) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.mob-item').forEach(n => n.classList.remove('active'));
+
+    if (navEl) {
+      navEl.classList.add('active');
+      const idx = ['feed','queries','add','settings'].indexOf(name);
+      if (idx >= 0) {
+        const mob = document.querySelectorAll('.mob-item')[idx];
+        if (mob) mob.classList.add('active');
+      }
+    } else {
+      const idx = { feed: 0, queries: 1, add: 2, settings: 3 };
+      if (idx[name] !== undefined) {
+        const navItems = document.querySelectorAll('.nav-item');
+        const map = [0, 1, 2, 3];
+        if (navItems[map[idx[name]]]) navItems[map[idx[name]]].classList.add('active');
+        const mob = document.querySelectorAll('.mob-item')[idx[name]];
+        if (mob) mob.classList.add('active');
+      }
+    }
+
+    const meta = {
+      feed: ['Good morning, Rafid', '<span class="live-dot"></span> 5 queries running · April 28'],
+      queries: ['My queries', '<span class="live-dot"></span> 4 active · 1 paused'],
+      add: ['Add a query', 'Describe what you want to track'],
+      detail: ['Query detail', ''],
+      settings: ['Settings', 'Tune how BriefIQ speaks to you']
+    };
+
+    if (meta[name]) {
+      document.getElementById('tb-title').textContent = meta[name][0];
+      document.getElementById('tb-meta').innerHTML = meta[name][1];
+    }
+
+    document.querySelector('.content').scrollTop = 0;
+  }
+
+  function showDetail(key) {
+    const d = DETAILS[key];
+    if (!d) return;
+    prevScreen = document.querySelector('.screen.active').id.replace('screen-', '');
+    document.getElementById('d-title').textContent = d.title;
+    document.getElementById('d-freq').textContent = d.freq;
+    document.getElementById('d-next').textContent = d.next;
+
+    document.getElementById('d-timeline').innerHTML = d.timeline.map((t, i, arr) => `
+      <div class="tl-item">
+        <div class="tl-dot-col">
+          <div class="tl-dot" style="background:${t.color}"></div>
+          ${i < arr.length - 1 ? '<div class="tl-line"></div>' : ''}
+        </div>
+        <div class="tl-body">
+          <div class="tl-date">${t.date}</div>
+          <div class="tl-text ${t.hl ? 'hl' : ''}">${t.text}</div>
+          ${t.source ? `<div class="tl-source">via <b>${t.source}</b></div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('d-sources').innerHTML = d.sources.map(s => `
+      <div class="source-item"><span class="source-dot"></span>${s}</div>
+    `).join('');
+
+    show('detail', null);
+  }
+
+  function goBack() { show(prevScreen, null); }
+
+  function fill(text) {
+    const el = document.getElementById('q-input');
+    el.value = text;
+    el.focus();
+    document.getElementById('confirm-panel').classList.remove('show');
+  }
+
+  function confirmQuery() {
+    const val = document.getElementById('q-input').value.trim();
+    if (!val) {
+      document.getElementById('q-input').focus();
+      return;
+    }
+    document.getElementById('confirm-text').textContent = '"' + val + '"';
+    document.getElementById('confirm-panel').classList.add('show');
+    setTimeout(() => {
+      document.getElementById('confirm-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  }
+
+  function cancelConfirm() {
+    document.getElementById('confirm-panel').classList.remove('show');
+  }
+
+  function pickFreq(el) {
+    el.parentElement.querySelectorAll('.freq-btn').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+  }
+
+  function pickPill(el) {
+    el.parentElement.querySelectorAll('.pill').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+  }
+
+  function saveQuery() {
+    document.getElementById('q-input').value = '';
+    document.getElementById('confirm-panel').classList.remove('show');
+    show('queries', null);
+  }
+
+  function thanks(el) {
+    el.textContent = '✓ Thanks';
+    el.style.background = 'var(--accent-muted)';
+    el.style.color = 'var(--accent-bright)';
+    el.style.borderColor = 'var(--accent-line)';
+    el.disabled = true;
+    setTimeout(() => {
+      const siblings = el.parentElement.querySelectorAll('.fb-btn');
+      siblings.forEach(s => { if (s !== el) s.style.opacity = '0.5'; });
+    }, 0);
+  }
+</script>
+</body>
+</html>
