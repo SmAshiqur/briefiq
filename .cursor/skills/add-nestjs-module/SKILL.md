@@ -25,7 +25,7 @@ You need a new REST resource group: `/feedback`, `/sources`, `/tags`, etc. The w
 
 ```bash
 cd briefiq-api
-pnpm nest g resource modules/<name> --no-spec
+npx nest g resource modules/<name> --no-spec
 ```
 
 This creates `src/modules/<name>/<name>.module.ts`, `<name>.controller.ts`, `<name>.service.ts`, and `dto/`. Skip the auto-spec; add tests intentionally in step 7.
@@ -64,8 +64,8 @@ export const feedback = pgTable('feedback', {
 Generate and apply the migration:
 
 ```bash
-pnpm drizzle-kit generate --name add_feedback
-pnpm drizzle:migrate
+npm run drizzle:generate -- --name add_feedback
+npm run drizzle:migrate
 ```
 
 Commit the generated SQL file under `drizzle/migrations/`.

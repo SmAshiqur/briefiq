@@ -24,29 +24,52 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be >= 16 chars'),
   JWT_EXPIRES_IN: z.string().default('30d'),
 
-  // LLM gateway (Vercel AI SDK -> OpenRouter pattern)
+  // ── LLM gateway (Vercel AI SDK -> OpenRouter pattern) ──
   LLM_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
-  LLM_API_KEY: z.string().min(1),
+
+  // Multi-key rotation. Comma-separated list of OpenRouter API keys.
+  // The KeyRotator picks the least-loaded healthy key on every call and
+  // puts a key on cooldown when it 429s. Stacking N free accounts gives
+  // N× the effective per-day quota at zero cost.
+  // See `getOpenRouterKeys()` below for resolution order.
+  OPENROUTER_API_KEYS: z.string().optional().default(''),
+
+  // Legacy single-key fallback. Used only if OPENROUTER_API_KEYS is empty.
+  LLM_API_KEY: z.string().optional().default(''),
+
+  // Default model name. `openrouter/auto` is the free auto-router.
   LLM_MODEL: z.string().min(1).default('openrouter/auto'),
-  // Comma-separated pinned cascade. When the auto-router 429s, we walk this
-  // list one model at a time. See services/llm.service.ts withFreeTierFallback.
+
+  // Pinned cascade walked when the default model fails. Comma-separated.
   LLM_FREE_CASCADE: z
     .string()
     .default(
       'deepseek/deepseek-chat:free,qwen/qwen3-coder-480b:free,openai/gpt-oss-20b:free',
     ),
 
-  // Search
+  // ── Paid fallback (optional, last resort) ──
+  // When set, the LLM cascade tries this AFTER every free key/model combo
+  // has failed or been throttled. Leave blank to enforce free-only behavior
+  // (silence-is-a-feature: degrade gracefully instead of charging).
+  PAID_LLM_BASE_URL: z
+    .string()
+    .url()
+    .optional()
+    .default('https://openrouter.ai/api/v1'),
+  PAID_LLM_API_KEY: z.string().optional().default(''),
+  PAID_LLM_MODEL: z.string().optional().default(''),
+
+  // ── Search ──
   TAVILY_API_KEY: z.string().min(1).optional(),
   FIRECRAWL_API_KEY: z.string().optional(),
 
-  // Apple Sign-In (optional during prototype; required for prod auth)
+  // ── Apple Sign-In (optional during prototype) ──
   APPLE_TEAM_ID: z.string().optional(),
   APPLE_CLIENT_ID: z.string().optional(),
   APPLE_KEY_ID: z.string().optional(),
   APPLE_PRIVATE_KEY: z.string().optional(),
 
-  // APNs (optional during prototype; required to actually send pushes)
+  // ── APNs (optional during prototype) ──
   APNS_KEY_ID: z.string().optional(),
   APNS_TEAM_ID: z.string().optional(),
   APNS_BUNDLE_ID: z.string().default('com.briefiq.app'),
@@ -88,4 +111,44 @@ export function getFreeModelCascade(): string[] {
     .LLM_FREE_CASCADE.split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/**
+ * Resolve the list of OpenRouter API keys to rotate across.
+ *
+ * Resolution order:
+ *   1. OPENROUTER_API_KEYS (multi-key, comma-separated) — preferred
+ *   2. LLM_API_KEY (single key, legacy)
+ *
+ * Throws if neither is set. Called once by ServicesModule's KeyRotator
+ * factory at boot, so misconfig fails fast with a readable message.
+ */
+export function getOpenRouterKeys(): string[] {
+  const env = getEnv();
+  const fromMulti = env.OPENROUTER_API_KEYS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (fromMulti.length > 0) return fromMulti;
+  if (env.LLM_API_KEY) return [env.LLM_API_KEY];
+  throw new Error(
+    'No OpenRouter keys configured. Set OPENROUTER_API_KEYS in .env ' +
+      '(comma-separated). See .env.example for details.',
+  );
+}
+
+/** Optional paid fallback config — null when not configured. */
+export interface PaidLlmConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
+export function getPaidLlmConfig(): PaidLlmConfig | null {
+  const env = getEnv();
+  if (!env.PAID_LLM_API_KEY || !env.PAID_LLM_MODEL) return null;
+  return {
+    baseUrl: env.PAID_LLM_BASE_URL,
+    apiKey: env.PAID_LLM_API_KEY,
+    model: env.PAID_LLM_MODEL,
+  };
 }

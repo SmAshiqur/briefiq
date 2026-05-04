@@ -123,3 +123,5 @@ backups/
 # Local scratch / personal notes — uncomment if you keep a scratch dir.
 # scratch/
 # notes.local.md
+.env.local 
+.env

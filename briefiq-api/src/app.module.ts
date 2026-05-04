@@ -10,6 +10,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
 
 import { DatabaseModule } from './db/database.module';
+import { RedisModule } from './redis/redis.module';
 import { ServicesModule } from './services/services.module';
 
 import { HealthController } from './health.controller';
@@ -20,6 +21,7 @@ import { BriefingsModule } from './modules/briefings/briefings.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { PushModule } from './modules/push/push.module';
+import { WorkersModule } from './workers/workers.module';
 
 @Module({
   imports: [
@@ -46,6 +48,7 @@ import { PushModule } from './modules/push/push.module';
 
     // Shared infra modules.
     DatabaseModule,
+    RedisModule,
     ServicesModule,
 
     // Feature modules. Each owns its REST surface + business rules.
@@ -55,6 +58,11 @@ import { PushModule } from './modules/push/push.module';
     FeedbackModule,
     SettingsModule,
     PushModule,
+
+    // Background workers — BullMQ queue + cron poller. Lives inside the
+    // API process during prototype; can be split into its own container
+    // later by removing from this list and starting a separate Nest app.
+    WorkersModule,
   ],
   controllers: [HealthController],
 })

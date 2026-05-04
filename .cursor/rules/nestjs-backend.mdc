@@ -1,0 +1,55 @@
+---
+description: NestJS / TypeScript conventions for the briefiq-api backend
+globs: briefiq-api/**/*.ts
+alwaysApply: false
+---
+
+# NestJS / TypeScript Rules
+
+## Tooling
+- Package manager: **npm** (not pnpm/yarn). Lock file is `package-lock.json`.
+- Run dev: `npm run dev` (NestJS watch mode).
+- Tests: `npm test` (Jest, regex `*.spec.ts`).
+- Lint: `npm run lint`.
+
+## Module structure
+- One folder per feature under `src/modules/<name>/`.
+- Files: `<name>.module.ts`, `<name>.controller.ts`, `<name>.service.ts`, `dto/<verb>-<name>.dto.ts`.
+- Generate scaffolds with `npx nest g resource modules/<name>` then trim the spec file.
+- Shared services (LLM, embeddings, search, etc.) live in `src/services/` and are exposed via `services.module.ts`.
+
+## Validation
+- HTTP request DTOs use `class-validator` + `class-transformer`.
+- LLM structured-output schemas use `Zod` via Vercel AI SDK.
+- `ValidationPipe` is registered globally in `main.ts` with `{ whitelist: true, transform: true }`.
+- Never trust raw `req.body`.
+
+## Database
+- Drizzle is the only ORM. Schema lives in `src/db/schema.ts` (single source of truth).
+- pgvector columns: `vector('embedding', { dimensions: 384 })`.
+- HNSW index on every vector column: `index('...').using('hnsw', t.embedding.op('vector_cosine_ops'))`.
+- Migration generation: `npm run drizzle:generate`. Apply locally: `npm run drizzle:migrate` (runs `tsx src/db/migrate.ts`).
+- Commit every generated migration file under `drizzle/migrations/`.
+- Raw SQL only via `db.execute(sql\`...\`)` and only when Drizzle's typed API can't express it.
+
+## LLM access
+- Always via `LlmService` (in `src/services/llm.service.ts`). Never instantiate `createOpenAI` elsewhere.
+- Model name from `process.env.LLM_MODEL` — never hard-code. The env reader is `getEnv()` in `src/config/env.ts`.
+- Use `generateObject` with a Zod schema for any structured output. `generateText + JSON.parse` is forbidden.
+- All public LlmService methods wrap their generation in `this.withFreeTierFallback(...)` for 429 backoff + free-model cascade.
+- On exhaustion, callers catch `LlmExhaustedError` and degrade the cycle to "no fresh briefing" rather than crashing.
+
+## Workers
+- BullMQ via `@nestjs/bullmq`. One processor per job type in `src/workers/`.
+- Cron via `@nestjs/schedule` `@Cron`/`@Interval`. No external Beat process.
+- Long steps acquire a Postgres advisory lock per query: `SELECT pg_advisory_xact_lock(query_id)`.
+- Jobs are idempotent: a duplicate run produces no extra side effect.
+
+## Logging / errors
+- `nestjs-pino` is the logger. No `console.log` in committed code.
+- Throw typed errors (`LlmExhaustedError`, `NotFoundException`, etc.) — never plain strings.
+- Sentry hooks wire later; for now use the structured logger.
+
+## Tests
+- Jest + supertest. Each module has `<name>.service.spec.ts` and a controller spec where logic warrants it.
+- Test files live alongside source OR in `test/` for cross-module integration tests.

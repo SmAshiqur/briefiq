@@ -1,0 +1,41 @@
+---
+description: SwiftUI / iOS conventions for the BriefIQ-iOS app
+globs: BriefIQ-iOS/**/*.swift
+alwaysApply: false
+---
+
+# Swift / iOS Rules
+
+## Project layout
+- Each feature gets its own folder under `BriefIQ-iOS/Features/<Name>/`.
+- A feature folder contains: `<Name>View.swift`, `<Name>ViewModel.swift`, plus colocated sub-views (`BriefingCard.swift`, `QueryRow.swift`, etc.).
+- Shared utilities live in `BriefIQ-iOS/Core/` (Network, Models, Auth, Push).
+- Tests live in `BriefIQ-iOS/Tests/`, one file per ViewModel.
+
+## SwiftUI patterns
+- Use the Observation framework (`@Observable`) on ViewModels — never `ObservableObject` / Combine.
+- ViewModels expose `var` properties; views read them directly via `@State private var vm`.
+- `async/await` everywhere. Never `DispatchQueue.main.async`.
+- `URLSession` directly — no Alamofire. All networking goes through `Core/Network/APIClient.swift`.
+- ViewModels call `APIClient`; views never touch `URLSession`.
+
+## Persistence
+- `SwiftData` is a local read-cache only.
+- The backend is the source of truth — never persist user-authored data only locally.
+- `Core/Auth/TokenStore.swift` uses Keychain for the JWT.
+
+## Native APIs (preferred over third-party)
+- `UserNotifications` for push.
+- `ActivityKit` for Live Activities (monitoring status).
+- `WidgetKit` for the Today widget.
+- `App Intents` for Siri / Shortcuts.
+- `AuthenticationServices` for Sign in with Apple.
+
+## No third-party deps without explicit approval
+- No SwiftLint, SnapKit, Alamofire, RxSwift, etc. unless asked.
+- Apple frameworks first.
+
+## Tests
+- `XCTest` only. Add `@MainActor` to the test class for ViewModel tests.
+- One test file per ViewModel, mirroring `Features/` layout.
+- Mock `APIClient` via a static factory like `.mocked(returning:)`.

@@ -1,0 +1,41 @@
+---
+description: Universal coding conventions for the BriefIQ repo (iOS + backend)
+alwaysApply: true
+---
+
+# BriefIQ Conventions
+
+Read [AGENTS.md](../../AGENTS.md) for the full project context. This file is the lightweight always-on layer.
+
+## Code style
+- Files under 200 lines. Split when they grow.
+- Clear, descriptive names. `runQueryCycle` not `processIt`.
+- Comments are plentiful and explain WHY (intent, constraints, trade-offs).
+- Avoid pure narration comments (`// increment counter`). Good naming covers the WHAT.
+- Never delete old comments unless they are obviously obsolete or wrong.
+- No emojis in code. UI strings are fine.
+
+## File naming
+- Backend: kebab-case with dot suffix — `auth.module.ts`, `jwt-auth.guard.ts`, `current-user.decorator.ts`.
+- iOS: PascalCase — `FeedView.swift`, `BriefingCard.swift`.
+
+## Errors
+- Don't jump to conclusions. Consider multiple possible causes before fixing.
+- Explain the problem in plain English first.
+- Make minimal changes — change as few lines as needed.
+
+## Tests
+- Write a test for every meaningful change.
+- Run tests after each change.
+- Backend tests: `npm test` from `briefiq-api/`. iOS tests: Xcode `Cmd+U`.
+
+## Simplicity
+- Pick the simpler approach unless there's a concrete reason not to.
+- Modular over clever.
+- Focus on core functionality before optimization.
+
+## Product philosophy (never violate)
+- Silence is a feature. Empty briefings are valid output, not errors.
+- Push only on real signal. Default to daily digest mode.
+- Respect attention: honor quiet hours, Focus modes, interruption levels.
+- Never repeat a briefing the user has already seen.

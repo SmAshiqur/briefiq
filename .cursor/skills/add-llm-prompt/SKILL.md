@@ -57,37 +57,43 @@ Output: {
 }`;
 ```
 
-## Step 3: Service method
+## Step 3: Add a method to `LlmService`
+
+Open `briefiq-api/src/services/llm.service.ts`. Add the new method alongside `understandQuery` and `summarizeDelta`. Wrap the call in `this.withFreeTierFallback(...)` — that private method already handles 429 backoff and cascading through the free-model fallback list from `getFreeModelCascade()`.
 
 ```ts
-@Injectable()
-export class LlmService {
-  constructor(private readonly router: OpenAIProvider) {}
-
-  async understandQuery(text: string): Promise<QueryUnderstanding> {
+async classifyImportance(text: string): Promise<MyOutput> {
+  return this.withFreeTierFallback(async (modelName) => {
     const { object } = await generateObject({
-      model: this.router(process.env.LLM_MODEL!),
-      schema: QueryUnderstanding,
+      model: this.getRouter()(modelName),
+      schema: MyOutput,
       system: SYSTEM_PROMPT,
       prompt: text,
     });
     return object;
-  }
+  });
 }
 ```
 
-## Step 4: Error handling
+Notes:
+- `this.getRouter()(modelName)` — the cascade gives you the model name to try.
+- The cascade catches 429 (rate limit) and other model-availability errors and tries the next one.
+- If every model fails, `LlmExhaustedError` is thrown.
 
-Wrap LLM calls in the shared helper that:
+## Step 4: Caller error handling
 
-- Retries 429 with exponential backoff (1s, 2s, 4s)
-- Cascades through `FREE_MODEL_CASCADE` (`deepseek-chat:free` → `qwen3-coder-480b:free` → `gpt-oss-20b:free`)
-- Throws `LlmExhaustedError` if all fail; the caller logs and degrades the cycle to "no fresh briefing"
+Callers catch `LlmExhaustedError` and degrade the cycle (no fresh briefing) instead of crashing the worker.
 
 ```ts
-const result = await withFreeTierFallback(() =>
-  this.llm.understandQuery(text)
-);
+try {
+  const out = await this.llm.classifyImportance(text);
+} catch (err) {
+  if (err instanceof LlmExhaustedError) {
+    this.logger.warn('All free LLMs exhausted; skipping cycle');
+    return null;
+  }
+  throw err;
+}
 ```
 
 ## Step 5: Test

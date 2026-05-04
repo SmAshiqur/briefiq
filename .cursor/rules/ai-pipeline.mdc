@@ -1,0 +1,47 @@
+---
+description: AI pipeline rules — prompts, structured output, delta detection, embeddings
+globs: briefiq-api/src/services/{llm,snapshot,delta,briefing,embeddings,search}.service.ts
+alwaysApply: false
+---
+
+# AI Pipeline Rules
+
+## Structured output
+- Always Vercel AI SDK `generateObject` with a Zod schema.
+- `generateText + JSON.parse` is forbidden — schemas are the contract.
+- Schemas live colocated with the service that uses them, exported as `const X = z.object(...)` plus `export type X = z.infer<typeof X>`.
+- Every Zod field gets a `.describe()` — the LLM reads these as field hints.
+
+## LLM calls
+- Go through `LlmService.understandQuery(...)`, `LlmService.summarizeDelta(...)`, etc. Never call `generateObject` directly outside `LlmService`.
+- All LlmService public methods wrap generation in `this.withFreeTierFallback(...)` for 429 backoff + cascade.
+- Free-model cascade comes from `getFreeModelCascade()` in `src/config/env.ts`. Don't hard-code model names anywhere.
+
+## Delta detection (cheapest first)
+1. Numeric rules — for tracked numbers (prices, rates), compare snapshot N vs N-1.
+2. Embedding cosine — pgvector similarity to last 5 snapshots → novelty score.
+3. LLM verdict — only when (1) and (2) are inconclusive.
+
+Document the threshold per stage in code comments.
+
+## Embeddings
+- Use `EmbeddingsService` only. Never call `@xenova/transformers` directly elsewhere.
+- 384-dim `Xenova/bge-small-en-v1.5`. If the column dimension changes, version the column and write a backfill.
+- Warm the pipeline at NestJS bootstrap (`onModuleInit`) so first-request latency stays low.
+
+## Cost & rate limits
+- Use the smallest free model that does the job — DeepSeek V3 free is the default for everything BriefIQ needs.
+- Free tier: 20 RPM / 200 RPD unfunded, 1000 RPD funded.
+- Backoff on 429: handled by `withFreeTierFallback`. Don't reinvent it.
+
+## Prompt hygiene
+- Prompts are `const SYSTEM_PROMPT = \`...\`` at the top of the service file (before any `@Injectable`).
+- Reference the Zod schema by intent in the prompt; don't list every field by name.
+- Include 1 worked example per prompt for tasks where output quality is fragile.
+
+## Memory & dedup
+- Before generating a briefing, check pgvector cosine vs last 30 days of briefings for the user.
+- If similarity > 0.92 → skip (already told them).
+
+## Adding a new prompt
+- Follow [.cursor/skills/add-llm-prompt/SKILL.md](../skills/add-llm-prompt/SKILL.md) end-to-end.

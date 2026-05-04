@@ -13,10 +13,19 @@ import { DeltaService } from './delta.service';
 import { BriefingService } from './briefing.service';
 import { ApnsService } from './apns.service';
 import { QuietHoursService } from './quiet-hours.service';
+import { KeyRotator } from './key-rotator';
+import { getOpenRouterKeys } from '../config/env';
 
 @Global()
 @Module({
   providers: [
+    // KeyRotator is built once at module init from the env. If keys aren't
+    // configured, getOpenRouterKeys() throws here with a readable error —
+    // the app fails to boot rather than silently 401-ing every LLM call.
+    {
+      provide: KeyRotator,
+      useFactory: () => new KeyRotator(getOpenRouterKeys()),
+    },
     LlmService,
     EmbeddingsService,
     SearchService,
@@ -27,6 +36,7 @@ import { QuietHoursService } from './quiet-hours.service';
     QuietHoursService,
   ],
   exports: [
+    KeyRotator,
     LlmService,
     EmbeddingsService,
     SearchService,
