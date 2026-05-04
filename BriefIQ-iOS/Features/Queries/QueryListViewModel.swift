@@ -31,13 +31,16 @@ final class QueryListViewModel {
     func load() async {
         isLoading = true
         defer { isLoading = false }
+
         do {
             queries = try await QueriesAPI.list()
             error = nil
-        } catch let err as APIError {
-            error = err
         } catch {
-            error = .transport(error)
+            if let apiError = error as? APIError {
+                self.error = apiError
+            } else {
+                self.error = .transport(error)
+            }
         }
     }
 }
