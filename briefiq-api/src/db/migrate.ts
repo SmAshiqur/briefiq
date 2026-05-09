@@ -8,10 +8,14 @@
 // applies any SQL files in ./drizzle/migrations not already in the
 // `__drizzle_migrations` tracking table.
 
-import 'dotenv/config';
+import { config } from 'dotenv';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+
+// Explicit call ensures .env is loaded before main() runs, regardless of
+// whether tsx treats this file as CJS or ESM.
+config();
 
 async function main() {
   const url = process.env.DATABASE_URL;

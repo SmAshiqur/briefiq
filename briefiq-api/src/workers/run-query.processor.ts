@@ -40,7 +40,7 @@ import { BriefingService } from '../services/briefing.service';
 import { ApnsService } from '../services/apns.service';
 import { QuietHoursService } from '../services/quiet-hours.service';
 
-import { RUN_QUERY_QUEUE } from './workers.module';
+import { RUN_QUERY_QUEUE } from './constants';
 
 export interface RunQueryJobData {
   queryId: string;

@@ -17,7 +17,7 @@ import { and, asc, eq, isNull, lte, or } from 'drizzle-orm';
 
 import { DRIZZLE_TOKEN, type DrizzleDb } from '../db/client';
 import { queries } from '../db/schema';
-import { RUN_QUERY_QUEUE } from './workers.module';
+import { RUN_QUERY_QUEUE } from './constants';
 import type { RunQueryJobData } from './run-query.processor';
 
 // Cap per tick so a sudden flood doesn't blast the LLM cascade in one

@@ -14,7 +14,7 @@ import { getEnv } from '../config/env';
 
 // Symbol-keyed token for NestJS DI. Imported by DatabaseModule + any service
 // that needs DB access.
-export const DRIZZLE_TOKEN = Symbol('DRIZZLE_DB');
+export const DRIZZLE_TOKEN = Symbol('1  `');
 
 /**
  * Build the postgres connection + Drizzle wrapper. Called once by

@@ -17,10 +17,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { getEnv } from '../config/env';
 import { RunQueryProcessor } from './run-query.processor';
 import { ScheduleService } from './schedule.service';
+import { RUN_QUERY_QUEUE } from './constants';
 
-// Exported as a constant so the @Processor and @InjectQueue decorators
-// can't drift apart from the actual queue name.
-export const RUN_QUERY_QUEUE = 'run-query';
+export { RUN_QUERY_QUEUE };
 
 @Module({
   imports: [
