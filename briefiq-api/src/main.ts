@@ -38,10 +38,12 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(env.PORT);
+  // '0.0.0.0' exposes the server on all network interfaces, not just loopback.
+  // Required for other LAN devices (e.g. Mac) to reach this Windows host.
+  await app.listen(env.PORT, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
-  logger.log(`BriefIQ API listening on http://localhost:${env.PORT}`);
+  logger.log(`BriefIQ API listening on http://0.0.0.0:${env.PORT}`);
   logger.log(`Health: GET http://localhost:${env.PORT}/health`);
   logger.log(`Env:    NODE_ENV=${env.NODE_ENV}, LLM_MODEL=${env.LLM_MODEL}`);
 }
