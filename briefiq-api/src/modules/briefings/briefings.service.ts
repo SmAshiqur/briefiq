@@ -83,6 +83,26 @@ export class BriefingsService {
     };
   }
 
+  /** All briefings for one query — used by the iOS query-detail history timeline. */
+  async forQuery(userId: string, queryId: string) {
+    // Join queries so we can enforce ownership without a separate lookup.
+    return this.db
+      .select({
+        id: briefings.id,
+        queryId: briefings.queryId,
+        importance: briefings.importance,
+        summary: briefings.summary,
+        deltaVerdict: briefings.deltaVerdict,
+        sourcesJson: briefings.sourcesJson,
+        deliveredAt: briefings.deliveredAt,
+        createdAt: briefings.createdAt,
+      })
+      .from(briefings)
+      .innerJoin(queries, eq(briefings.queryId, queries.id))
+      .where(and(eq(briefings.queryId, queryId), eq(queries.userId, userId)))
+      .orderBy(desc(briefings.createdAt));
+  }
+
   /** Single briefing — used by the iOS detail screen. */
   async getOne(userId: string, id: string) {
     const rows = await this.db

@@ -38,6 +38,17 @@ services:
     volumes:
       - briefiq-redis-data:/data
 
+  # Dozzle: real-time log viewer for all containers.
+  # Open http://localhost:9999 to stream postgres, redis, and (if dockerised)
+  # the API logs in one place.
+  dozzle:
+    image: amir20/dozzle:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:9999:8080"
+
 volumes:
   briefiq-pg-data:
   briefiq-redis-data:

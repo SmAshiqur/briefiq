@@ -5,9 +5,11 @@
 // the imports array here.
 
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
+import { LoggingInterceptor } from './common/logging.interceptor';
 
 import { DatabaseModule } from './db/database.module';
 import { RedisModule } from './redis/redis.module';
@@ -65,5 +67,8 @@ import { WorkersModule } from './workers/workers.module';
     WorkersModule,
   ],
   controllers: [HealthController],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+  ],
 })
 export class AppModule {}

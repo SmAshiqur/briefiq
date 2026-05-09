@@ -3,24 +3,34 @@
 //
 // Shows:
 //   - Title + meta (frequency / next check / signal)
-//   - History timeline (snapshots, color-coded by importance)
+//   - History timeline (briefings, color-coded by importance)
 //   - Sources side card
 //   - "Was this useful?" feedback row
-//   - Action row: Edit, Pause, Delete
+//   - Action row: Pause/Resume, Delete
 
 import SwiftUI
 
 struct QueryDetailView: View {
     let queryID: UUID
+    @Environment(\.dismiss) private var dismiss
 
-    // Local state for now. Pulls from MockData when no backend is reachable.
     @State private var query: Query?
     @State private var briefings: [Briefing] = []
     @State private var feedbackSubmitted: Feedback.Rating?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.system(size: 13))
+                        .foregroundStyle(BriefIQTheme.red)
+                        .padding(.vertical, 8)
+                }
+
                 title
                 metaRow
                 Divider().background(BriefIQTheme.border)
@@ -40,7 +50,14 @@ struct QueryDetailView: View {
         }
         .background(BriefIQTheme.bg)
         .navigationBarTitleDisplayMode(.inline)
-        .task { load() }
+        .refreshable { await load() }
+        .task { await load() }
+        .alert("Delete query?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) { Task { await deleteQuery() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Removes this query and all its history. Cannot be undone.")
+        }
     }
 
     // ── Sections ───────────────────────────────────────────────────────
@@ -79,7 +96,9 @@ struct QueryDetailView: View {
                 TimelineItem(briefing: b, isLast: idx == briefings.count - 1)
             }
             if briefings.isEmpty {
-                Text("No history yet. The first check is on the way.")
+                Text(isLoading
+                     ? "Loading history…"
+                     : "No history yet. The first check is on the way.")
                     .font(.system(size: 13))
                     .foregroundStyle(BriefIQTheme.text3)
                     .padding(.vertical, 14)
@@ -99,7 +118,7 @@ struct QueryDetailView: View {
                             .foregroundStyle(BriefIQTheme.text2)
                     }
                 }
-                if (query?.sources?.domains.isEmpty ?? true) {
+                if query?.sources?.domains.isEmpty ?? true {
                     Text("Auto-detecting credible sources…")
                         .font(.system(size: 12))
                         .foregroundStyle(BriefIQTheme.text3)
@@ -107,14 +126,8 @@ struct QueryDetailView: View {
             }
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius)
-                .fill(BriefIQTheme.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius)
-                .strokeBorder(BriefIQTheme.border, lineWidth: 1)
-        )
+        .background(RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius).fill(BriefIQTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius).strokeBorder(BriefIQTheme.border, lineWidth: 1))
     }
 
     private var feedbackCard: some View {
@@ -135,21 +148,20 @@ struct QueryDetailView: View {
                 .padding(.top, 4)
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius)
-                .fill(BriefIQTheme.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius)
-                .strokeBorder(BriefIQTheme.border, lineWidth: 1)
-        )
+        .background(RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius).fill(BriefIQTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadius).strokeBorder(BriefIQTheme.border, lineWidth: 1))
     }
 
     private var actionRow: some View {
         HStack(spacing: 8) {
-            actionButton("Edit query", danger: false) {}
-            actionButton(query?.status == .paused ? "Resume" : "Pause", danger: false) {}
-            actionButton("Delete", danger: true) {}
+            actionButton(
+                query?.status == .paused ? "Resume" : "Pause",
+                danger: false
+            ) { Task { await togglePause() } }
+
+            actionButton("Delete", danger: true) {
+                showDeleteConfirm = true
+            }
         }
     }
 
@@ -160,10 +172,7 @@ struct QueryDetailView: View {
                 .foregroundStyle(danger ? BriefIQTheme.red : BriefIQTheme.text2)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadiusSmall)
-                        .fill(BriefIQTheme.surface)
-                )
+                .background(RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadiusSmall).fill(BriefIQTheme.surface))
                 .overlay(
                     RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadiusSmall)
                         .strokeBorder(danger ? BriefIQTheme.red.opacity(0.5) : BriefIQTheme.border, lineWidth: 1)
@@ -184,9 +193,9 @@ struct QueryDetailView: View {
     private var frequencyLabel: String {
         switch query?.frequency {
         case .hourly: return "Every few hours"
-        case .daily: return "Daily"
+        case .daily:  return "Daily"
         case .weekly: return "Weekly"
-        case nil: return "—"
+        case nil:     return "—"
         }
     }
 
@@ -199,17 +208,38 @@ struct QueryDetailView: View {
         (query?.signalThreshold ?? .balanced).rawValue.capitalized
     }
 
-    private func load() {
-        // For now: source mock data so the screen always renders cleanly.
-        // Replace with: try await QueriesAPI.list().first(where: { $0.id == queryID })
-        query = MockData.queries.first(where: { $0.id == queryID }) ?? MockData.queries[0]
-        briefings = MockData.briefings.filter { $0.queryId == queryID }
+    // ── Data + actions ─────────────────────────────────────────────────
+
+    private func load() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            async let q = QueriesAPI.getOne(queryID)
+            async let b = BriefingsAPI.forQuery(queryID)
+            let (fetchedQuery, fetchedBriefings) = try await (q, b)
+            query = fetchedQuery
+            briefings = fetchedBriefings
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func togglePause() async {
+        guard let current = query else { return }
+        let newStatus = current.status == .paused ? "active" : "paused"
+        if let updated = try? await QueriesAPI.update(queryID, QueriesAPI.UpdateBody(status: newStatus)) {
+            query = updated
+        }
+    }
+
+    private func deleteQuery() async {
+        try? await QueriesAPI.delete(queryID)
+        dismiss()
     }
 
     private func submitFeedback(_ rating: Feedback.Rating) async {
         feedbackSubmitted = rating
-        // Best-effort fire and forget. The button state already changed
-        // optimistically; if the network fails we accept the lie for UX.
         if let firstBriefingID = briefings.first?.id {
             _ = try? await BriefingsAPI.feedback(briefingID: firstBriefingID, rating: rating)
         }
@@ -218,7 +248,7 @@ struct QueryDetailView: View {
 
 #Preview {
     NavigationStack {
-        QueryDetailView(queryID: MockData.dollarQueryID)
+        QueryDetailView(queryID: UUID())
             .preferredColorScheme(.dark)
     }
 }

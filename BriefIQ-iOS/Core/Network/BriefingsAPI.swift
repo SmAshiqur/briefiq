@@ -14,6 +14,13 @@ enum BriefingsAPI {
         try await APIClient.shared.get("/briefings/\(id.uuidString.lowercased())", as: Briefing.self)
     }
 
+    static func forQuery(_ queryId: UUID) async throws -> [Briefing] {
+        try await APIClient.shared.get(
+            "/briefings/query/\(queryId.uuidString.lowercased())",
+            as: [Briefing].self
+        )
+    }
+
     static func feedback(briefingID: UUID, rating: Feedback.Rating) async throws -> Feedback {
         struct Body: Encodable { let rating: String }
         return try await APIClient.shared.post(
@@ -25,6 +32,10 @@ enum BriefingsAPI {
 }
 
 enum QueriesAPI {
+    static func getOne(_ id: UUID) async throws -> Query {
+        try await APIClient.shared.get("/queries/\(id.uuidString.lowercased())", as: Query.self)
+    }
+
     static func analyze(text: String) async throws -> QueryUnderstanding {
         struct Body: Encodable { let text: String }
         return try await APIClient.shared.post(

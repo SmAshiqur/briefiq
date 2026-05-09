@@ -230,8 +230,11 @@ export class LlmService {
 
         try {
           const router = this.getRouter(pick.key, env.LLM_BASE_URL);
+          const t0 = Date.now();
+          this.logger.log(`LLM call model=${model} key=${pick.keyId}`);
           const result = await fn(router, model);
           this.keyRotator.markSuccess(pick.key);
+          this.logger.log(`LLM ok model=${model} key=${pick.keyId} +${Date.now() - t0}ms`);
           return result;
         } catch (err) {
           lastErr = err;
