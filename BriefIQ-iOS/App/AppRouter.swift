@@ -58,6 +58,22 @@ struct AppRouter: View {
         // Sage-green accent matches the dark-mode prototype.
         .tint(BriefIQTheme.accent)
         .environment(state)
+        // Dev-only: obtain a JWT on first launch so authenticated endpoints
+        // work without an Apple Developer account. The backend rejects this
+        // call in production (NODE_ENV != development), so it is safe to
+        // ship in the binary — it will simply never succeed outside dev.
+        .task { await ensureDevToken() }
+    }
+
+    private func ensureDevToken() async {
+        guard await TokenStore.shared.token() == nil else { return }
+        do {
+            let response = try await AuthAPI.devSignIn(handle: "dev-user")
+            await TokenStore.shared.setToken(response.token)
+        } catch {
+            // Server unreachable or already in production mode.
+            // Views will surface 401s individually — acceptable in dev.
+        }
     }
 }
 
