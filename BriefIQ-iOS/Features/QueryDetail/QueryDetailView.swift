@@ -51,7 +51,17 @@ struct QueryDetailView: View {
         .background(BriefIQTheme.bg)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
-        .task { await load() }
+        .task {
+            await load()
+            // Poll every 10s while awaiting the first briefing (worker may still
+            // be running). Stops automatically once history arrives or after 5min.
+            var ticks = 0
+            while !Task.isCancelled && briefings.isEmpty && ticks < 30 {
+                try? await Task.sleep(for: .seconds(10))
+                await load()
+                ticks += 1
+            }
+        }
         .alert("Delete query?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { Task { await deleteQuery() } }
             Button("Cancel", role: .cancel) {}
@@ -69,7 +79,7 @@ struct QueryDetailView: View {
     }
 
     private var metaRow: some View {
-        HStack(spacing: 18) {
+        VStack(alignment: .leading, spacing: 6) {
             metaItem(icon: "arrow.triangle.2.circlepath", label: "Frequency", value: frequencyLabel)
             metaItem(icon: "clock", label: "Next check", value: nextCheckLabel)
             metaItem(icon: "circle.dotted", label: "Signal", value: thresholdLabel)

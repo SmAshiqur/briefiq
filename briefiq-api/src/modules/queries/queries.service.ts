@@ -11,10 +11,14 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { and, desc, eq } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb } from '../../db/client';
 import { queries } from '../../db/schema';
 import { LlmService, type QueryUnderstanding } from '../../services/llm.service';
+import { RUN_QUERY_QUEUE } from '../../workers/constants';
+import type { RunQueryJobData } from '../../workers/run-query.processor';
 import type { CreateQueryDto } from './dto/create-query.dto';
 import type { UpdateQueryDto } from './dto/update-query.dto';
 
@@ -25,6 +29,7 @@ export class QueriesService {
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleDb,
     private readonly llm: LlmService,
+    @InjectQueue(RUN_QUERY_QUEUE) private readonly runQueue: Queue<RunQueryJobData>,
   ) {}
 
   /**
@@ -52,6 +57,22 @@ export class QueriesService {
       })
       .returning();
     this.logger.log(`Created query ${row.id} for user ${userId}`);
+
+    // Enqueue immediately so the first result arrives in seconds, not after
+    // the next cron tick (up to 60s). jobId = queryId deduplicates against
+    // ScheduleService if the cron fires before the worker finishes.
+    await this.runQueue.add(
+      'run-query',
+      { queryId: row.id },
+      {
+        jobId: row.id,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 30_000 },
+        removeOnComplete: { age: 24 * 60 * 60 },
+        removeOnFail: { age: 7 * 24 * 60 * 60 },
+      },
+    );
+
     return row;
   }
 

@@ -114,30 +114,27 @@ struct ConfirmPanelView: View {
     }
 
     private var thresholdRow: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Signal threshold")
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundStyle(BriefIQTheme.text2)
-            Text("only meaningful changes")
-                .font(.system(size: 12, weight: .medium))
-                .italic()
-                .foregroundStyle(BriefIQTheme.text)
-            Spacer()
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 ForEach(Query.Threshold.allCases, id: \.self) { t in
                     Button {
                         vm.chosenThreshold = t
                     } label: {
                         Text(t.rawValue.capitalized)
-                            .font(.system(size: 11))
+                            .font(.system(size: 11.5))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
                             .foregroundStyle(vm.chosenThreshold == t ? BriefIQTheme.bg : BriefIQTheme.text2)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
                             .background(
-                                Capsule().fill(vm.chosenThreshold == t ? BriefIQTheme.accent : Color.clear)
+                                RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadiusSmall)
+                                    .fill(vm.chosenThreshold == t ? BriefIQTheme.accent : Color.black.opacity(0.20))
                             )
                             .overlay(
-                                Capsule().strokeBorder(vm.chosenThreshold == t ? BriefIQTheme.accent : BriefIQTheme.border2, lineWidth: 1)
+                                RoundedRectangle(cornerRadius: BriefIQTheme.cornerRadiusSmall)
+                                    .strokeBorder(vm.chosenThreshold == t ? BriefIQTheme.accent : BriefIQTheme.border2, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
