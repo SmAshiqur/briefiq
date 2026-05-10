@@ -86,10 +86,12 @@ export class BriefingsService {
   /** All briefings for one query — used by the iOS query-detail history timeline. */
   async forQuery(userId: string, queryId: string) {
     // Join queries so we can enforce ownership without a separate lookup.
+    // queryText included so iOS Briefing decoder (shared with /today) succeeds.
     return this.db
       .select({
         id: briefings.id,
         queryId: briefings.queryId,
+        queryText: queries.rawText,
         importance: briefings.importance,
         summary: briefings.summary,
         deltaVerdict: briefings.deltaVerdict,

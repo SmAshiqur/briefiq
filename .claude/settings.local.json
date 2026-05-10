@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx tsc *)",
       "PowerShell(docker info 2>&1)",
-      "PowerShell(Get-Command postgres, psql, redis-server, redis-cli 2>&1)"
+      "PowerShell(Get-Command postgres, psql, redis-server, redis-cli 2>&1)",
+      "Bash(curl -s http://localhost:11434/v1/models)"
     ]
   }
 }

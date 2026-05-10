@@ -44,7 +44,7 @@ const EnvSchema = z.object({
   LLM_FREE_CASCADE: z
     .string()
     .default(
-      'deepseek/deepseek-chat:free,qwen/qwen3-coder-480b:free,openai/gpt-oss-20b:free',
+      'google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,openai/gpt-oss-20b:free',
     ),
 
   // ── Paid fallback (optional, last resort) ──
@@ -64,7 +64,7 @@ const EnvSchema = z.object({
   // http://host.docker.internal:11434/v1 (from inside Docker).
   // Leave blank to disable Ollama fallback.
   OLLAMA_BASE_URL: z.string().url().optional(),
-  OLLAMA_MODEL: z.string().optional().default('qwen2.5:latest'),
+  OLLAMA_MODEL: z.string().optional().default('qwen3.5:9b'),
 
   // ── Search ──
   TAVILY_API_KEY: z.string().min(1).optional(),

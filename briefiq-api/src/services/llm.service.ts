@@ -19,7 +19,7 @@
 // which the worker catches and degrades to "no fresh briefing this cycle".
 
 import { Injectable, Logger } from '@nestjs/common';
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import {
@@ -149,15 +149,31 @@ export class LlmService {
    * "Analyze with AI →" panel on the iOS Add Query screen.
    */
   async understandQuery(text: string): Promise<QueryUnderstanding> {
-    return this.runWithFallback(async (router, modelName) => {
-      const { object } = await generateObject({
+    // Ollama fn uses generateText + manual parse — avoids tool-calling which
+    // many local models don't implement cleanly.
+    const ollamaFn = async (router: Router, modelName: string): Promise<QueryUnderstanding> => {
+      const { text: raw } = await generateText({
         model: router(modelName),
-        schema: QueryUnderstanding,
-        system: UNDERSTAND_QUERY_PROMPT,
+        system:
+          UNDERSTAND_QUERY_PROMPT +
+          '\n\nRespond ONLY with a valid JSON object. No markdown, no code fences, no explanation.',
         prompt: text,
       });
-      return object;
-    });
+      return QueryUnderstanding.parse(this.extractJson(raw));
+    };
+
+    return this.runWithFallback(
+      async (router, modelName) => {
+        const { object } = await generateObject({
+          model: router(modelName),
+          schema: QueryUnderstanding,
+          system: UNDERSTAND_QUERY_PROMPT,
+          prompt: text,
+        });
+        return object;
+      },
+      ollamaFn,
+    );
   }
 
   /**
@@ -170,19 +186,35 @@ export class LlmService {
     deltaVerdict: string;
     facts: unknown;
   }): Promise<DeltaSummary> {
-    return this.runWithFallback(async (router, modelName) => {
-      const { object } = await generateObject({
+    const prompt = [
+      `User question: "${input.queryText}"`,
+      `Delta verdict: ${input.deltaVerdict}`,
+      `Structured facts: ${JSON.stringify(input.facts).slice(0, 1500)}`,
+    ].join('\n\n');
+
+    const ollamaFn = async (router: Router, modelName: string): Promise<DeltaSummary> => {
+      const { text: raw } = await generateText({
         model: router(modelName),
-        schema: DeltaSummary,
-        system: SUMMARIZE_DELTA_PROMPT,
-        prompt: [
-          `User question: "${input.queryText}"`,
-          `Delta verdict: ${input.deltaVerdict}`,
-          `Structured facts: ${JSON.stringify(input.facts).slice(0, 1500)}`,
-        ].join('\n\n'),
+        system:
+          SUMMARIZE_DELTA_PROMPT +
+          '\n\nRespond ONLY with a valid JSON object with keys "importance" and "summary". No markdown.',
+        prompt,
       });
-      return object;
-    });
+      return DeltaSummary.parse(this.extractJson(raw));
+    };
+
+    return this.runWithFallback(
+      async (router, modelName) => {
+        const { object } = await generateObject({
+          model: router(modelName),
+          schema: DeltaSummary,
+          system: SUMMARIZE_DELTA_PROMPT,
+          prompt,
+        });
+        return object;
+      },
+      ollamaFn,
+    );
   }
 
   // ── Private: cascade orchestrator ─────────────────────────────────────
@@ -204,7 +236,7 @@ export class LlmService {
    * No exponential backoff inside this method — the rotator's per-key
    * cooldown does the work of "wait before retrying that combo".
    */
-  private async runWithFallback<T>(fn: LlmAttempt<T>): Promise<T> {
+  private async runWithFallback<T>(fn: LlmAttempt<T>, ollamaFn?: LlmAttempt<T>): Promise<T> {
     const env = getEnv();
     const models = [env.LLM_MODEL, ...getFreeModelCascade()].filter(
       // dedupe in case LLM_MODEL is also listed in the cascade
@@ -265,7 +297,9 @@ export class LlmService {
       return await this.tryPaidFallback(fn, lastErr);
     } catch {
       // ── Local Ollama last resort ──
-      return this.tryOllamaFallback(fn, lastErr);
+      // Use ollamaFn (generateText-based) when provided — avoids tool-calling
+      // which many local models don't support.
+      return this.tryOllamaFallback(ollamaFn ?? fn, lastErr);
     }
   }
 
@@ -337,6 +371,20 @@ export class LlmService {
         err instanceof Error ? err : undefined,
       );
     }
+  }
+
+  /**
+   * Strip markdown code fences and extract the first JSON object from raw LLM
+   * text output. Ollama (and some OpenRouter models) wrap JSON in ``` blocks.
+   */
+  private extractJson(raw: string): unknown {
+    const stripped = raw
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+    const match = stripped.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error(`No JSON object found in LLM response: ${raw.slice(0, 200)}`);
+    return JSON.parse(match[0]);
   }
 
   /**
