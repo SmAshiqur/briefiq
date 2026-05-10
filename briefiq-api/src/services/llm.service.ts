@@ -26,6 +26,7 @@ import {
   getEnv,
   getFreeModelCascade,
   getPaidLlmConfig,
+  getOllamaConfig,
   type PaidLlmConfig,
 } from '../config/env';
 import { KeyRotator } from './key-rotator';
@@ -260,7 +261,12 @@ export class LlmService {
     }
 
     // ── Paid fallback ──
-    return this.tryPaidFallback(fn, lastErr);
+    try {
+      return await this.tryPaidFallback(fn, lastErr);
+    } catch {
+      // ── Local Ollama last resort ──
+      return this.tryOllamaFallback(fn, lastErr);
+    }
   }
 
   /**
@@ -291,6 +297,43 @@ export class LlmService {
       );
       throw new LlmExhaustedError(
         'Free-tier exhausted; paid fallback also failed.',
+        err instanceof Error ? err : undefined,
+      );
+    }
+  }
+
+  /**
+   * Try local Ollama as the last-resort fallback.
+   * Ollama exposes an OpenAI-compatible endpoint — createOpenAI works with it
+   * by pointing baseURL at http://localhost:11434/v1.
+   * Throws LlmExhaustedError when Ollama is not configured or also fails.
+   */
+  private async tryOllamaFallback<T>(
+    fn: LlmAttempt<T>,
+    lastErr: unknown,
+  ): Promise<T> {
+    const ollama = getOllamaConfig();
+    if (!ollama) {
+      throw new LlmExhaustedError(
+        'All LLM options exhausted (free, paid, Ollama not configured).',
+        lastErr instanceof Error ? lastErr : undefined,
+      );
+    }
+
+    try {
+      const t0 = Date.now();
+      this.logger.warn(
+        `Free+paid exhausted. Falling back to local Ollama model=${ollama.model}.`,
+      );
+      // Ollama requires any non-empty apiKey string; 'ollama' is conventional.
+      const router = this.getRouter('ollama', ollama.baseUrl);
+      const result = await fn(router, ollama.model);
+      this.logger.log(`Ollama ok model=${ollama.model} +${Date.now() - t0}ms`);
+      return result;
+    } catch (err) {
+      this.logger.error(`Ollama fallback failed: ${(err as Error).message}`);
+      throw new LlmExhaustedError(
+        'All LLM options exhausted (free, paid, Ollama).',
         err instanceof Error ? err : undefined,
       );
     }

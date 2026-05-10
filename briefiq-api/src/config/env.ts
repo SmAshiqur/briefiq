@@ -59,6 +59,13 @@ const EnvSchema = z.object({
   PAID_LLM_API_KEY: z.string().optional().default(''),
   PAID_LLM_MODEL: z.string().optional().default(''),
 
+  // ── Local Ollama fallback (last resort, free, runs on dev machine) ──
+  // Set OLLAMA_BASE_URL to http://localhost:11434/v1 (native) or
+  // http://host.docker.internal:11434/v1 (from inside Docker).
+  // Leave blank to disable Ollama fallback.
+  OLLAMA_BASE_URL: z.string().url().optional(),
+  OLLAMA_MODEL: z.string().optional().default('qwen2.5:latest'),
+
   // ── Search ──
   TAVILY_API_KEY: z.string().min(1).optional(),
   FIRECRAWL_API_KEY: z.string().optional(),
@@ -134,6 +141,18 @@ export function getOpenRouterKeys(): string[] {
     'No OpenRouter keys configured. Set OPENROUTER_API_KEYS in .env ' +
       '(comma-separated). See .env.example for details.',
   );
+}
+
+/** Local Ollama config — null when OLLAMA_BASE_URL is not set. */
+export interface OllamaConfig {
+  baseUrl: string;
+  model: string;
+}
+
+export function getOllamaConfig(): OllamaConfig | null {
+  const env = getEnv();
+  if (!env.OLLAMA_BASE_URL) return null;
+  return { baseUrl: env.OLLAMA_BASE_URL, model: env.OLLAMA_MODEL };
 }
 
 /** Optional paid fallback config — null when not configured. */

@@ -67,10 +67,16 @@ export class DeltaService {
       .orderBy(desc(snapshots.createdAt))
       .limit(1);
 
-    // First-ever snapshot for this query -> nothing to compare to. We
-    // don't push a "first run" briefing; the user will see history later.
+    // First-ever snapshot: no prior to compare against. Treat as a signal
+    // so the user immediately sees what we found rather than waiting for
+    // the second run. The briefing summarizer will produce an "initial
+    // snapshot" style summary.
     if (prior.length === 0) {
-      return { changed: false, reason: 'no_signal' };
+      return {
+        changed: true,
+        explanation: 'First data snapshot for this query — here is what we found.',
+        score: 1.0,
+      };
     }
 
     const distance = Number(prior[0].distance);
