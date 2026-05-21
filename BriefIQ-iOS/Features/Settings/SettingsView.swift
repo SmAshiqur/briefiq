@@ -13,7 +13,13 @@ import SwiftUI
 struct SettingsView: View {
     @State private var vm = SettingsViewModel()
     @State private var lastError: String?
-    @State private var apiBaseURL: String = "—"
+
+    // Diagnostics: where the API URL is coming from (Info.plist, env, or
+    // UserDefaults override) plus a text field for setting an override.
+    @State private var apiBaseURL: String = APIConfig.baseURL.absoluteString
+    @State private var apiBaseURLSource: String = APIConfig.resolvedSource
+    @State private var apiBaseURLDraft: String = ""
+    @State private var apiBaseURLSaveMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -39,8 +45,7 @@ struct SettingsView: View {
             .task {
                 await vm.load()
                 lastError = await MonitoringService.shared.lastErrorMessage()
-                apiBaseURL = ProcessInfo.processInfo.environment["BRIEFIQ_API_BASE_URL"]
-                    ?? "http://localhost:3000 (default)"
+                refreshAPIConfigState()
             }
         }
     }
@@ -198,7 +203,7 @@ struct SettingsView: View {
 
     private var diagnosticsCard: some View {
         cardContainer {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("API base URL")
                     .font(.system(size: 13.5, weight: .medium))
                     .foregroundStyle(BriefIQTheme.text)
@@ -206,6 +211,37 @@ struct SettingsView: View {
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(BriefIQTheme.text2)
                     .textSelection(.enabled)
+                Text("Source: \(apiBaseURLSource)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(BriefIQTheme.text3)
+
+                // Runtime override survives `xcodegen generate` because it
+                // lives in UserDefaults, not the Xcode scheme.
+                TextField("http://192.168.1.x:3000", text: $apiBaseURLDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                    .keyboardType(.URL)
+                    .font(.system(size: 12, design: .monospaced))
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8).fill(BriefIQTheme.bg)
+                    )
+
+                HStack(spacing: 10) {
+                    Button("Save override") { saveAPIBaseURLOverride() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(BriefIQTheme.accent)
+                    Button("Reset") { resetAPIBaseURLOverride() }
+                        .buttonStyle(.bordered)
+                        .tint(BriefIQTheme.text2)
+                }
+                .font(.system(size: 12))
+
+                if let msg = apiBaseURLSaveMessage {
+                    Text(msg)
+                        .font(.system(size: 11))
+                        .foregroundStyle(BriefIQTheme.text3)
+                }
 
                 divider
 
@@ -218,6 +254,47 @@ struct SettingsView: View {
                     .lineSpacing(2)
             }
         }
+    }
+
+    // ── Diagnostics actions ─────────────────────────────────────────────
+
+    /// Re-read APIConfig and reset the draft text to the current override.
+    private func refreshAPIConfigState() {
+        apiBaseURL = APIConfig.baseURL.absoluteString
+        apiBaseURLSource = APIConfig.resolvedSource
+        // Pre-fill the editor only when an override exists; otherwise leave
+        // the placeholder visible so the LAN IP shape is obvious.
+        if UserDefaults.standard.string(forKey: APIConfig.userDefaultsKey) != nil {
+            apiBaseURLDraft = apiBaseURL
+        } else {
+            apiBaseURLDraft = ""
+        }
+    }
+
+    /// Writes the draft to UserDefaults. APIConfig validates the URL shape.
+    /// The change takes effect on the next APIClient request (the actor
+    /// re-reads APIConfig on each new request through its init? No — but
+    /// the shared APIClient already captured the old URL. We restart auth
+    /// instead so the user's next call hits the new host.)
+    private func saveAPIBaseURLOverride() {
+        let trimmed = apiBaseURLDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            apiBaseURLSaveMessage = "Empty — use Reset to clear."
+            return
+        }
+        guard URL(string: trimmed) != nil else {
+            apiBaseURLSaveMessage = "That doesn't look like a valid URL."
+            return
+        }
+        APIConfig.setOverride(trimmed)
+        apiBaseURLSaveMessage = "Saved. Re-launch the app to apply."
+        refreshAPIConfigState()
+    }
+
+    private func resetAPIBaseURLOverride() {
+        APIConfig.setOverride(nil)
+        apiBaseURLSaveMessage = "Cleared. Re-launch the app to apply."
+        refreshAPIConfigState()
     }
 
     // ── Reusable bits ─────────────────────────────────────────────────

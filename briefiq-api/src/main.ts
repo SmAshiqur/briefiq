@@ -11,6 +11,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
 import { requestIdMiddleware } from './common/request-id.middleware';
+import { reachableUrls } from './common/network-info';
 import { EventStoreService } from './monitoring/event-store.service';
 import { initOptionalSentry } from './monitoring/sentry.init';
 
@@ -67,12 +68,22 @@ async function bootstrap() {
   });
 
   // '0.0.0.0' exposes the server on all network interfaces, not just loopback.
-  // Required for other LAN devices (e.g. Mac) to reach this Windows host.
+  // Required for other LAN devices (e.g. a Mac simulator) to reach this host.
   await app.listen(env.PORT, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
-  logger.log(`BriefIQ API listening on http://0.0.0.0:${env.PORT}`);
-  logger.log(`Health: GET http://localhost:${env.PORT}/health`);
+  logger.log(`BriefIQ API listening on port ${env.PORT}`);
+
+  // Print every URL the server is reachable on. LAN URLs come first because
+  // that's what a Mac/iOS device needs — `localhost` only works for tools
+  // running on this same machine. Copy the LAN URL into the iOS app's
+  // Settings → Diagnostics override (or BriefIQAPIBaseURL in project.yml).
+  logger.log('Reachable URLs:');
+  for (const url of reachableUrls(env.PORT)) {
+    logger.log(`  ${url}`);
+  }
+
+  logger.log(`Health: GET /health`);
   logger.log(`Env:    NODE_ENV=${env.NODE_ENV}, LLM_MODEL=${env.LLM_MODEL}`);
   logger.log(`Ops:    GET /ops/events (dev), POST /ops/events (client logs)`);
 }

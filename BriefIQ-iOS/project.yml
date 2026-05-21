@@ -46,10 +46,18 @@ targets:
           - remote-notification
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        # Lets the iOS app talk to localhost during dev. Tighten before
-        # store submission.
+        # API base URL — baked into the binary so `xcodegen generate`
+        # cannot wipe it (Scheme env vars get regenerated). Override at
+        # runtime via Settings → Diagnostics (writes UserDefaults).
+        #
+        # Replace this with your LAN IP when running on a real device or
+        # when the simulator can't reach the backend at localhost.
+        BriefIQAPIBaseURL: http://localhost:3000
+        # Lets the iOS app talk to localhost AND arbitrary LAN IPs during
+        # dev. Tighten before store submission.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.briefiq.app

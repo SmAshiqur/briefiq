@@ -1,22 +1,22 @@
 // OpsAPI.swift
-// Thin wrapper for monitoring endpoints.
+// Tiny wrapper around POST /ops/events.
+//
+// Implemented as an enum with a static method because there is no per-call
+// state to keep. APIClient.shared handles auth, retries, and base URL.
+// APIClient deliberately suppresses monitoring for any path beginning with
+// `/ops/`, so the call below cannot loop on a network failure.
 
 import Foundation
 
-struct OpsAPI {
-    private let client: APIClient
-
-    init(client: APIClient = .shared) {
-        self.client = client
-    }
-
-    func postEvents(_ events: [ClientEventPayload]) async throws -> CreateClientEventsResponse {
-        try await client.post(
+enum OpsAPI {
+    @discardableResult
+    static func postEvents(
+        _ events: [ClientEventPayload]
+    ) async throws -> CreateClientEventsResponse {
+        try await APIClient.shared.post(
             "/ops/events",
             body: CreateClientEventsBody(events: events),
-            as: CreateClientEventsResponse.self,
-            requiresAuth: true,
-            skipMonitoring: true
+            as: CreateClientEventsResponse.self
         )
     }
 }
