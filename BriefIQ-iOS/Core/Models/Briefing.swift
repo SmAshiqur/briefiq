@@ -60,4 +60,11 @@ struct TodayFeed: Codable, Hashable {
         let noChange: Int
         let running: Int
     }
+
+    /// Empty feed for runtime — NOT mock UUIDs. Previews use MockData.feed.
+    static let empty = TodayFeed(
+        changes: [],
+        stillMonitoring: [],
+        counts: Counts(updatesToday: 0, noChange: 0, running: 0)
+    )
 }

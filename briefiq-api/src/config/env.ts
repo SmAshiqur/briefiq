@@ -82,6 +82,13 @@ const EnvSchema = z.object({
   APNS_BUNDLE_ID: z.string().default('com.briefiq.app'),
   APNS_PRIVATE_KEY: z.string().optional(),
   APNS_PRODUCTION: z.coerce.boolean().default(false),
+
+  // ── Monitoring (optional) ──
+  // SENTRY_DSN: set + install @sentry/nestjs to forward errors to Sentry.
+  SENTRY_DSN: z.string().url().optional(),
+
+  // OPS_READ_TOKEN: required in production to read GET /ops/events|summary.
+  OPS_READ_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

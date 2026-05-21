@@ -36,7 +36,9 @@ actor TokenStore {
     }
 
     /// Save a token. Replaces any existing one for our account.
-    func setToken(_ value: String) {
+    /// Returns false if Keychain rejected the write (simulator edge cases).
+    @discardableResult
+    func setToken(_ value: String) -> Bool {
         let data = Data(value.utf8)
         // Delete existing first to avoid duplicate-item errors.
         clear()
@@ -46,10 +48,11 @@ actor TokenStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecValueData as String: data,
-            // Available after first unlock — covers background refresh.
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            // This-device-only avoids iCloud Keychain sync quirks in the sim.
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
-        SecItemAdd(attrs as CFDictionary, nil)
+        let status = SecItemAdd(attrs as CFDictionary, nil)
+        return status == errSecSuccess
     }
 
     /// Remove the token. Called on sign-out or 401 responses.

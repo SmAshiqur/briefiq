@@ -7,10 +7,10 @@ import XCTest
 
 @MainActor
 final class FeedViewModelTests: XCTestCase {
-    func test_initialState_usesMockData() {
+    func test_initialState_isEmptyUntilLoad() {
         let vm = FeedViewModel()
-        XCTAssertEqual(vm.feed.changes.count, 2)
-        XCTAssertEqual(vm.feed.stillMonitoring.count, 3)
+        XCTAssertEqual(vm.feed.changes.count, 0)
+        XCTAssertEqual(vm.feed.stillMonitoring.count, 0)
         XCTAssertFalse(vm.hasLoaded)
     }
 

@@ -25,6 +25,7 @@ import { sql } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb } from './db/client';
 import { REDIS_TOKEN, type RedisClient } from './redis/client';
 import { KeyRotator } from './services/key-rotator';
+import { EventStoreService } from './monitoring/event-store.service';
 
 interface SubsystemCheck {
   ok: boolean;
@@ -40,6 +41,7 @@ export class HealthController {
     @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleDb,
     @Inject(REDIS_TOKEN) private readonly redis: RedisClient,
     private readonly keyRotator: KeyRotator,
+    private readonly eventStore: EventStoreService,
   ) {}
 
   @Get()
@@ -51,6 +53,7 @@ export class HealthController {
     ]);
 
     const llmSummary = this.summarizeLlmKeys();
+    const monitoring = this.eventStore.summary();
 
     const body = {
       ok: dbCheck.ok, // DB is the only blocker for "alive"
@@ -61,6 +64,10 @@ export class HealthController {
         db: dbCheck,
         redis: redisCheck,
         llm: llmSummary,
+        monitoring: {
+          recentErrors: monitoring.byLevel.error,
+          eventsLastHour: monitoring.lastHour,
+        },
       },
     };
 

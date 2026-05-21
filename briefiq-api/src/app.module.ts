@@ -5,11 +5,13 @@
 // the imports array here.
 
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
+import { HttpExceptionFilter } from './common/http-exception.filter';
 import { LoggingInterceptor } from './common/logging.interceptor';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 import { DatabaseModule } from './db/database.module';
 import { RedisModule } from './redis/redis.module';
@@ -23,6 +25,7 @@ import { BriefingsModule } from './modules/briefings/briefings.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { PushModule } from './modules/push/push.module';
+import { OpsModule } from './modules/ops/ops.module';
 import { WorkersModule } from './workers/workers.module';
 
 @Module({
@@ -52,6 +55,7 @@ import { WorkersModule } from './workers/workers.module';
     DatabaseModule,
     RedisModule,
     ServicesModule,
+    MonitoringModule,
 
     // Feature modules. Each owns its REST surface + business rules.
     AuthModule,
@@ -60,6 +64,7 @@ import { WorkersModule } from './workers/workers.module';
     FeedbackModule,
     SettingsModule,
     PushModule,
+    OpsModule,
 
     // Background workers — BullMQ queue + cron poller. Lives inside the
     // API process during prototype; can be split into its own container
@@ -69,6 +74,7 @@ import { WorkersModule } from './workers/workers.module';
   controllers: [HealthController],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })
 export class AppModule {}

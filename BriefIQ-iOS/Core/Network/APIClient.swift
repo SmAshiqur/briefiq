@@ -68,28 +68,42 @@ actor APIClient {
 
     // ── HTTP verbs ───────────────────────────────────────────────────────
 
-    func get<T: Decodable>(_ path: String, as type: T.Type = T.self) async throws -> T {
-        try await request(path: path, method: "GET", body: Optional<EmptyBody>.none, as: type)
+    func get<T: Decodable>(
+        _ path: String,
+        as type: T.Type = T.self,
+        requiresAuth: Bool = true,
+        skipMonitoring: Bool = false
+    ) async throws -> T {
+        try await request(path: path, method: "GET", body: Optional<EmptyBody>.none, as: type, requiresAuth: requiresAuth, skipMonitoring: skipMonitoring)
     }
 
     func post<B: Encodable, T: Decodable>(
         _ path: String,
         body: B,
-        as type: T.Type = T.self
+        as type: T.Type = T.self,
+        requiresAuth: Bool = true,
+        skipMonitoring: Bool = false
     ) async throws -> T {
-        try await request(path: path, method: "POST", body: body, as: type)
+        try await request(path: path, method: "POST", body: body, as: type, requiresAuth: requiresAuth, skipMonitoring: skipMonitoring)
     }
 
     func patch<B: Encodable, T: Decodable>(
         _ path: String,
         body: B,
-        as type: T.Type = T.self
+        as type: T.Type = T.self,
+        requiresAuth: Bool = true,
+        skipMonitoring: Bool = false
     ) async throws -> T {
-        try await request(path: path, method: "PATCH", body: body, as: type)
+        try await request(path: path, method: "PATCH", body: body, as: type, requiresAuth: requiresAuth, skipMonitoring: skipMonitoring)
     }
 
-    func delete<T: Decodable>(_ path: String, as type: T.Type = T.self) async throws -> T {
-        try await request(path: path, method: "DELETE", body: Optional<EmptyBody>.none, as: type)
+    func delete<T: Decodable>(
+        _ path: String,
+        as type: T.Type = T.self,
+        requiresAuth: Bool = true,
+        skipMonitoring: Bool = false
+    ) async throws -> T {
+        try await request(path: path, method: "DELETE", body: Optional<EmptyBody>.none, as: type, requiresAuth: requiresAuth, skipMonitoring: skipMonitoring)
     }
 
     // ── Core ─────────────────────────────────────────────────────────────
@@ -98,19 +112,30 @@ actor APIClient {
         path: String,
         method: String,
         body: B?,
-        as: T.Type
+        as: T.Type,
+        requiresAuth: Bool,
+        skipMonitoring: Bool,
+        isRetry: Bool = false
     ) async throws -> T {
         guard let url = URL(string: path, relativeTo: baseURL) else {
-            throw APIError.invalidURL
+            let err = APIError.invalidURL
+            if !skipMonitoring {
+                await MonitoringService.shared.recordAPIError(err, path: path, method: method)
+            }
+            throw err
+        }
+
+        // Block until JWT exists. Skipped for /auth/* so dev sign-in can
+        // bootstrap without a circular dependency.
+        if requiresAuth {
+            try await AuthSession.shared.ensureToken()
         }
 
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        // Attach JWT if we have one. Anonymous endpoints (e.g. /auth/dev)
-        // simply don't have a token yet; that's fine.
-        if let token = await tokenStore.token() {
+        if requiresAuth, let token = await tokenStore.token() {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
@@ -123,20 +148,44 @@ actor APIClient {
         do {
             (data, response) = try await session.data(for: req)
         } catch {
-            throw APIError.transport(error)
+            let err = APIError.transport(error)
+            if !skipMonitoring {
+                await MonitoringService.shared.recordAPIError(err, path: path, method: method)
+            }
+            throw err
         }
 
         guard let http = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+            let err = APIError.invalidResponse
+            if !skipMonitoring {
+                await MonitoringService.shared.recordAPIError(err, path: path, method: method)
+            }
+            throw err
+        }
+
+        // One retry: token may have expired or bootstrap raced on cold start.
+        if http.statusCode == 401, requiresAuth, !isRetry {
+            try await AuthSession.shared.refresh()
+            return try await request(
+                path: path,
+                method: method,
+                body: body,
+                as: `as`,
+                requiresAuth: requiresAuth,
+                skipMonitoring: skipMonitoring,
+                isRetry: true
+            )
         }
 
         guard (200..<300).contains(http.statusCode) else {
-            // Try to surface the backend's error message for debug logs.
             let detail = String(data: data, encoding: .utf8)
-            throw APIError.status(code: http.statusCode, body: detail)
+            let err = APIError.status(code: http.statusCode, body: detail)
+            if !skipMonitoring {
+                await MonitoringService.shared.recordAPIError(err, path: path, method: method)
+            }
+            throw err
         }
 
-        // Some endpoints return 204 / empty bodies; tolerate that.
         if data.isEmpty, let empty = EmptyResponse() as? T {
             return empty
         }
@@ -144,7 +193,11 @@ actor APIClient {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
-            throw APIError.decode(error)
+            let err = APIError.decode(error)
+            if !skipMonitoring {
+                await MonitoringService.shared.recordAPIError(err, path: path, method: method)
+            }
+            throw err
         }
     }
 }

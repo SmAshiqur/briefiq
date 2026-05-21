@@ -39,6 +39,7 @@ import { DeltaService } from '../services/delta.service';
 import { BriefingService } from '../services/briefing.service';
 import { ApnsService } from '../services/apns.service';
 import { QuietHoursService } from '../services/quiet-hours.service';
+import { EventStoreService } from '../monitoring/event-store.service';
 
 import { RUN_QUERY_QUEUE } from './constants';
 
@@ -59,6 +60,7 @@ export class RunQueryProcessor extends WorkerHost {
     private readonly briefing: BriefingService,
     private readonly apns: ApnsService,
     private readonly quietHours: QuietHoursService,
+    private readonly eventStore: EventStoreService,
   ) {
     super();
   }
@@ -149,11 +151,16 @@ export class RunQueryProcessor extends WorkerHost {
     } catch (err) {
       // Any error inside the pipeline aborts THIS cycle but does NOT crash
       // the worker. The query gets rescheduled normally.
-      this.logger.error(
-        `run-query failed queryId=${queryId}: ${(err as Error).message}`,
-      );
+      const msg = (err as Error).message;
+      this.logger.error(`run-query failed queryId=${queryId}: ${msg}`);
+      this.eventStore.record({
+        source: 'worker',
+        level: 'error',
+        message: msg,
+        context: { queryId, jobId: job.id },
+      });
       fetchStatus = 'error';
-      fetchError = (err as Error).message;
+      fetchError = msg;
     } finally {
       // Always close out the fetch row + reschedule the query, even on error.
       const now = new Date();

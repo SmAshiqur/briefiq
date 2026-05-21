@@ -115,7 +115,8 @@ enum AuthAPI {
         try await APIClient.shared.post(
             "/auth/dev",
             body: DevSignInBody(handle: handle),
-            as: SignInResponse.self
+            as: SignInResponse.self,
+            requiresAuth: false
         )
     }
 }

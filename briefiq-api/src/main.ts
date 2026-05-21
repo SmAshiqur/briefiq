@@ -10,11 +10,17 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
+import { requestIdMiddleware } from './common/request-id.middleware';
+import { EventStoreService } from './monitoring/event-store.service';
+import { initOptionalSentry } from './monitoring/sentry.init';
 
 async function bootstrap() {
   // Validate env BEFORE NestFactory.create so a missing var fails fast
   // with a readable Zod error instead of a confusing module-init failure.
   const env = loadEnv();
+
+  // Optional — no-op when SENTRY_DSN is unset or package not installed.
+  initOptionalSentry(env);
 
   const app = await NestFactory.create(AppModule, {
     // Pino is wired inside AppModule via nestjs-pino. Default Nest logger
@@ -31,6 +37,28 @@ async function bootstrap() {
     }),
   );
 
+  // Correlation id on every request — must run before route handlers.
+  app.use(requestIdMiddleware);
+
+  // Process-level failures won't hit HttpExceptionFilter — record them here.
+  const eventStore = app.get(EventStoreService);
+  process.on('unhandledRejection', (reason) => {
+    eventStore.record({
+      source: 'server',
+      level: 'error',
+      message: 'unhandledRejection',
+      context: { reason: String(reason) },
+    });
+  });
+  process.on('uncaughtException', (err) => {
+    eventStore.record({
+      source: 'server',
+      level: 'error',
+      message: 'uncaughtException',
+      context: { error: err.message, stack: err.stack },
+    });
+  });
+
   // CORS is permissive in dev; tighten this for the iOS app's bundle origin
   // in production (set CORS_ORIGINS env var and read it here).
   app.enableCors({
@@ -46,6 +74,7 @@ async function bootstrap() {
   logger.log(`BriefIQ API listening on http://0.0.0.0:${env.PORT}`);
   logger.log(`Health: GET http://localhost:${env.PORT}/health`);
   logger.log(`Env:    NODE_ENV=${env.NODE_ENV}, LLM_MODEL=${env.LLM_MODEL}`);
+  logger.log(`Ops:    GET /ops/events (dev), POST /ops/events (client logs)`);
 }
 
 bootstrap().catch((err) => {

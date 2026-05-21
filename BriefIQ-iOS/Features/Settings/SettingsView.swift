@@ -12,6 +12,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @State private var vm = SettingsViewModel()
+    @State private var lastError: String?
+    @State private var apiBaseURL: String = "—"
 
     var body: some View {
         NavigationStack {
@@ -24,6 +26,8 @@ struct SettingsView: View {
                     signalCard
                     sectionLabel("Delivery")
                     deliveryCard
+                    sectionLabel("Diagnostics")
+                    diagnosticsCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -32,7 +36,12 @@ struct SettingsView: View {
             .background(BriefIQTheme.bg)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
-            .task { await vm.load() }
+            .task {
+                await vm.load()
+                lastError = await MonitoringService.shared.lastErrorMessage()
+                apiBaseURL = ProcessInfo.processInfo.environment["BRIEFIQ_API_BASE_URL"]
+                    ?? "http://localhost:3000 (default)"
+            }
         }
     }
 
@@ -183,6 +192,30 @@ struct SettingsView: View {
                         .labelsHidden()
                         .tint(BriefIQTheme.accent)
                 }
+            }
+        }
+    }
+
+    private var diagnosticsCard: some View {
+        cardContainer {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("API base URL")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(BriefIQTheme.text)
+                Text(apiBaseURL)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(BriefIQTheme.text2)
+                    .textSelection(.enabled)
+
+                divider
+
+                Text("Last client error")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(BriefIQTheme.text)
+                Text(lastError ?? "None — errors appear here and sync to POST /ops/events.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(lastError == nil ? BriefIQTheme.text3 : BriefIQTheme.text2)
+                    .lineSpacing(2)
             }
         }
     }

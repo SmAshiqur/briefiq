@@ -24,6 +24,7 @@ import { DeltaService } from '../src/services/delta.service';
 import { BriefingService } from '../src/services/briefing.service';
 import { ApnsService } from '../src/services/apns.service';
 import { QuietHoursService } from '../src/services/quiet-hours.service';
+import { EventStoreService } from '../src/monitoring/event-store.service';
 
 // ── DB mock helpers ───────────────────────────────────────────────────────
 //
@@ -131,6 +132,7 @@ describe('RunQueryProcessor', () => {
         { provide: BriefingService, useValue: briefing },
         { provide: ApnsService, useValue: apns },
         { provide: QuietHoursService, useValue: quietHours },
+        { provide: EventStoreService, useValue: { record: jest.fn() } },
       ],
     }).compile();
 

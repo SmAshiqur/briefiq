@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 final class QueryListViewModel {
-    var queries: [Query] = MockData.queries
+    var queries: [Query] = []
     var isLoading: Bool = false
     var error: APIError?
     var searchText: String = ""
@@ -35,12 +35,10 @@ final class QueryListViewModel {
         do {
             queries = try await QueriesAPI.list()
             error = nil
+        } catch let apiError as APIError {
+            self.error = apiError
         } catch {
-            if let apiError = error as? APIError {
-                self.error = apiError
-            } else {
-                self.error = .transport(error)
-            }
+            self.error = .transport(error)
         }
     }
 }

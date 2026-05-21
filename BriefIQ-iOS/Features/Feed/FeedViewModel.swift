@@ -11,9 +11,8 @@ import Observation
 @MainActor
 @Observable
 final class FeedViewModel {
-    /// Latest server response. Pre-populated with mock data so first paint
-    /// is never empty even if the network is offline.
-    var feed: TodayFeed = MockData.feed
+    /// Starts empty at runtime. Previews inject MockData.feed directly.
+    var feed: TodayFeed = .empty
 
     var isLoading: Bool = false
     var error: APIError?
